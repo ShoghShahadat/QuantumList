@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
-// فرض بر این است که پکیج شما در pubspec.yaml اضافه شده است
-// import 'package:quantum_list/quantum_list.dart';
-
-// --- شبیه‌سازی فایل‌های پکیج برای اجرای این مثال ---
-// در پروژه واقعی، این بخش را حذف کرده و پکیج را import کنید
-import 'package_simulator/quantum_list.dart';
-// --- پایان بخش شبیه‌سازی ---
+import 'package:quantum_list/quantum_list.dart';
 
 void main() {
   runApp(const QuantumExampleApp());
@@ -24,8 +18,11 @@ class QuantumExampleApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.purpleAccent,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purple.shade300,
+            foregroundColor: Colors.white,
+          ),
         ),
       ),
       home: const QuantumHomePage(),
@@ -33,7 +30,6 @@ class QuantumExampleApp extends StatelessWidget {
   }
 }
 
-// مدل داده برای آیتم‌های لیست
 class SampleItem {
   final int id;
   String title;
@@ -50,35 +46,25 @@ class QuantumHomePage extends StatefulWidget {
 }
 
 class _QuantumHomePageState extends State<QuantumHomePage> {
-  // استفاده از کامل‌ترین کنترلر که همه قابلیت‌ها را دارد
-  late final NotifyingQuantumListController<SampleItem> _controller;
+  late final FilterableQuantumListController<SampleItem> _controller;
   QuantumListType _listType = QuantumListType.list;
   int _nextItemId = 21;
 
   @override
   void initState() {
     super.initState();
-    _controller = NotifyingQuantumListController<SampleItem>(
+    _controller = FilterableQuantumListController<SampleItem>(
       List.generate(
-        20,
-        (i) => SampleItem(id: i + 1, title: 'آیتم شماره ${i + 1}'),
-      ),
-      onAtEnd: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('به انتهای لیست رسیدید!'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      },
-      onAtStart: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('به ابتدای لیست رسیدید!'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      },
+          20, (i) => SampleItem(id: i + 1, title: 'آیتم شماره ${i + 1}')),
+      onAtEnd: () => _showSnackBar('به انتهای لیست رسیدید!'),
+      onAtStart: () => _showSnackBar('به ابتدای لیست رسیدید!'),
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
     );
   }
 
@@ -94,13 +80,10 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
       appBar: AppBar(
         title: const Text('QuantumList Demo'),
         actions: [
-          // دکمه برای تغییر حالت لیست/گرید
           IconButton(
-            icon: Icon(
-              _listType == QuantumListType.list
-                  ? Icons.grid_view
-                  : Icons.view_list,
-            ),
+            icon: Icon(_listType == QuantumListType.list
+                ? Icons.grid_view
+                : Icons.view_list),
             onPressed: () {
               setState(() {
                 _listType = _listType == QuantumListType.list
@@ -112,42 +95,52 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
         ],
       ),
       body: QuantumList<SampleItem>(
+        key: ValueKey(_listType),
         controller: _controller,
         type: _listType,
         padding: const EdgeInsets.all(8),
-        // برای حالت گرید، این پارامتر الزامی است
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.5,
+          childAspectRatio: 1.6,
         ),
-        // این بیلدر، قلب تپنده ظاهر لیست شماست
         animationBuilder: (context, index, item, animation) {
-          // استفاده از انیمیشن‌های آماده
           return QuantumAnimations.scaleIn(
             context,
-            // استفاده از ویجت بوردر متحرک
             AnimatedBorderCard(
-              child: ListTile(
-                title: Text(item.title),
-                // این بخش با .atom مشخص شده و فقط خودش آپدیت می‌شود
-                subtitle: Text(
-                  'تعداد کلیک: ${item.counter}',
-                ).atom(_controller, index),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
                 onTap: () {
-                  // تست قابلیت به‌روزرسانی اتمی
                   _controller.updateProperty(index, (itemToUpdate) {
                     itemToUpdate.counter++;
                   });
                 },
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(item.title,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      // **FIX:** Using the new QuantumAtom widget
+                      QuantumAtom(
+                        controller: _controller,
+                        index: index,
+                        builder: (context) =>
+                            Text('تعداد کلیک: ${item.counter}'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             animation,
           );
         },
       ),
-      // پنل دکمه‌های کنترلی
       bottomNavigationBar: _buildControlPanel(),
     );
   }
@@ -160,79 +153,46 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
         runSpacing: 8,
         alignment: WrapAlignment.center,
         children: [
-          ElevatedButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('افزودن'),
-            onPressed: () {
-              _controller.add(
-                SampleItem(id: _nextItemId, title: 'آیتم جدید $_nextItemId'),
-              );
-              _nextItemId++;
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.remove),
-            label: const Text('حذف اولی'),
-            onPressed: () {
-              if (_controller.length > 0) {
-                _controller.removeAt(0);
-              }
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.filter_alt),
-            label: const Text('فیلتر (زوج)'),
-            onPressed: () {
-              // این کنترلر باید از نوع Filterable باشد
-              if (_controller is FilterableQuantumListController) {
-                (_controller as FilterableQuantumListController).filter(
-                  (item) => item.id % 2 == 0,
-                );
-              }
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.filter_alt_off),
-            label: const Text('حذف فیلتر'),
-            onPressed: () {
-              if (_controller is FilterableQuantumListController) {
-                (_controller as FilterableQuantumListController).filter(null);
-              }
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.arrow_downward),
-            label: const Text('برو به آیتم ۱۰'),
-            onPressed: () {
-              _controller.scrollToIndex(10, estimatedItemHeight: 80);
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.gps_fixed),
-            label: const Text('موقعیت آیتم ۲'),
-            onPressed: () {
-              final rect = _controller.getRectForIndex(2);
-              if (rect != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'موقعیت آیتم ۲: ${rect.top.toStringAsFixed(1)}px از بالا',
-                    ),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('آیتم ۲ روی صفحه نیست!')),
-                );
-              }
-            },
-          ),
+          ElevatedButton(
+              onPressed: () {
+                _controller.add(SampleItem(
+                    id: _nextItemId, title: 'آیتم جدید $_nextItemId'));
+                _nextItemId++;
+              },
+              child: const Text('افزودن')),
+          ElevatedButton(
+              onPressed: () {
+                if (_controller.length > 0) _controller.removeAt(0);
+              },
+              child: const Text('حذف اولی')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.filter((item) => item.id % 2 == 0);
+              },
+              child: const Text('فیلتر (زوج)')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.filter(null);
+              },
+              child: const Text('حذف فیلتر')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.scrollToIndex(10, estimatedItemHeight: 110);
+              },
+              child: const Text('برو به آیتم ۱۰')),
+          ElevatedButton(
+              onPressed: () {
+                final rect = _controller.getRectForIndex(2);
+                if (rect != null) {
+                  _showSnackBar(
+                      'موقعیت آیتم ۲: ${rect.top.toStringAsFixed(1)}px از بالا');
+                } else {
+                  _showSnackBar('آیتم ۲ روی صفحه نیست!');
+                }
+              },
+              child: const Text('موقعیت آیتم ۲')),
         ],
       ),
     );
   }
 }
-
-// نکته مهم: برای اینکه این مثال کار کند، باید فایل‌های پکیج را در یک پوشه
-// به نام `package_simulator` در کنار `main.dart` قرار دهید.
-// در پروژه واقعی، فقط کافیست پکیج را از pub.dev اضافه کنید.

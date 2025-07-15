@@ -6,10 +6,10 @@ export 'src/quantum_list_controller.dart';
 export 'src/controllers/filterable_quantum_list_controller.dart';
 export 'src/controllers/scrollable_quantum_list_controller.dart';
 export 'src/controllers/notifying_quantum_list_controller.dart';
-export 'src/atom_extension.dart';
 export 'src/enums.dart';
 export 'src/widgets/animated_border_card.dart';
 export 'src/widgets/quantum_animations.dart';
+export 'src/widgets/quantum_atom.dart';
 
 // Importing internal implementation
 import 'src/quantum_list_controller.dart';
@@ -17,8 +17,8 @@ import 'src/controllers/scrollable_quantum_list_controller.dart';
 import 'src/enums.dart';
 import 'src/models.dart';
 
-/// ویجت قدرتمند کوانتوم لیست - نسخه 1.3.2 با اصلاحات نهایی
-/// The powerful QuantumList widget - Version 1.3.2 with final fixes
+/// ویجت قدرتمند کوانتوم لیست - نسخه 1.4.1 با اصلاحات حیاتی
+/// The powerful QuantumList widget - Version 1.4.1 with critical fixes
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -81,7 +81,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     super.initState();
     _scrollController = ScrollController();
 
-    // **FIX:** Using nested if/else to avoid type inference issues with ternary operators.
     if (widget.isSliver) {
       if (widget.type == QuantumListType.list) {
         _listKey = GlobalKey<SliverAnimatedListState>();
@@ -111,6 +110,11 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       return null;
     }
     final context = _contextMap[index]!;
+    // **FIX:** Added a guard to check if the context is still mounted (active) in the tree.
+    if (!context.mounted) {
+      _contextMap.remove(index); // Clean up defunct context
+      return null;
+    }
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       return null;
@@ -127,7 +131,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _insertSubscription = widget.controller.insertStream.listen((index) {
       _animatedState?.insertItem(index, duration: widget.animationDuration);
     });
-    // **FIX:** Explicitly typing `removed` to satisfy some analyzer versions and added braces.
     _removeSubscription =
         widget.controller.removeStream.listen((RemovedItem<T> removed) {
       if (_animatedState == null) {
