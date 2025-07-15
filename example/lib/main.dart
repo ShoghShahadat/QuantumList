@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
+import 'dart:math';
 
 void main() {
   runApp(const QuantumExampleApp());
@@ -11,7 +12,7 @@ class QuantumExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList Example V2.3',
+      title: 'QuantumList Example V4.0',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -34,10 +35,15 @@ class SampleItem {
   final int id;
   String title;
   int counter;
+  double height; // For dynamic height example
 
-  SampleItem({required this.id, required this.title, this.counter = 0});
+  SampleItem(
+      {required this.id,
+      required this.title,
+      this.counter = 0,
+      required this.height});
 
-  int get numericId => int.tryParse(title.split(' ').last) ?? 0;
+  int get numericId => id;
 }
 
 class QuantumHomePage extends StatefulWidget {
@@ -50,16 +56,21 @@ class QuantumHomePage extends StatefulWidget {
 class _QuantumHomePageState extends State<QuantumHomePage> {
   late final FilterableQuantumListController<SampleItem> _controller;
   QuantumListType _listType = QuantumListType.list;
-  int _nextItemId = 51;
-  QuantumAnimationType _animationType =
-      QuantumAnimationType.scaleIn; // **[جدید]**
+  int _nextItemId = 1001;
+  QuantumAnimationType _animationType = QuantumAnimationType.scaleIn;
 
   @override
   void initState() {
     super.initState();
+    final random = Random();
     _controller = FilterableQuantumListController<SampleItem>(
       List.generate(
-          50, (i) => SampleItem(id: i + 1, title: 'آیتم شماره ${i + 1}')),
+          1000,
+          (i) => SampleItem(
+              id: i + 1,
+              title: 'آیتم شماره ${i + 1}',
+              // Assign a random height to each item
+              height: 80.0 + random.nextDouble() * 100.0)),
       onAtEnd: () => _showSnackBar('به انتهای لیست رسیدید!'),
       onAtStart: () => _showSnackBar('به ابتدای لیست رسیدید!'),
     );
@@ -83,9 +94,9 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuantumList V2.3 - زرادخانه انیمیشن'),
+        title: const Text('QuantumList V4.0 - معماری نهایی'),
         actions: [
-          _buildAnimationSelector(), // **[جدید]**
+          _buildAnimationSelector(),
           IconButton(
             icon: Icon(_listType == QuantumListType.list
                 ? Icons.grid_view
@@ -105,7 +116,6 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
     );
   }
 
-  // **[جدید]** ویجت انتخاب‌گر انیمیشن
   Widget _buildAnimationSelector() {
     return PopupMenuButton<QuantumAnimationType>(
       icon: const Icon(Icons.animation),
@@ -147,7 +157,6 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget _buildList() {
     final itemBuilder = (BuildContext context, int index, SampleItem item,
         Animation<double> animation) {
-      // **[جدید]** انتخاب انیمیشن بر اساس انتخاب کاربر
       switch (_animationType) {
         case QuantumAnimationType.fadeIn:
           return QuantumAnimations.fadeIn(
@@ -173,8 +182,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
 
     if (_listType == QuantumListType.list) {
       return QuantumList<SampleItem>(
-        key: ValueKey(
-            _animationType.toString() + '_list'), // Key must change to rebuild
+        key: ValueKey(_animationType.toString() + '_list'),
         controller: _controller,
         type: QuantumListType.list,
         padding: const EdgeInsets.all(8),
@@ -182,8 +190,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
       );
     } else {
       return QuantumList<SampleItem>(
-        key: ValueKey(
-            _animationType.toString() + '_grid'), // Key must change to rebuild
+        key: ValueKey(_animationType.toString() + '_grid'),
         controller: _controller,
         type: QuantumListType.grid,
         padding: const EdgeInsets.all(8),
@@ -191,7 +198,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           crossAxisCount: 2,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.6,
+          childAspectRatio: 1.0, // Adjusted for grid
         ),
         animationBuilder: itemBuilder,
       );
@@ -207,7 +214,8 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
             itemToUpdate.counter++;
           });
         },
-        child: Padding(
+        child: Container(
+          height: item.height, // Using dynamic height from the model
           padding: const EdgeInsets.all(12.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -239,47 +247,40 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           ElevatedButton(
               onPressed: () {
                 _controller.add(SampleItem(
-                    id: _nextItemId, title: 'آیتم شماره $_nextItemId'));
+                    id: _nextItemId,
+                    title: 'آیتم شماره $_nextItemId',
+                    height: 100));
                 _nextItemId++;
               },
               child: const Text('افزودن')),
           ElevatedButton(
               onPressed: () {
-                if (_controller.length > 0) _controller.removeAt(0);
-              },
-              child: const Text('حذف اولی')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.sort((a, b) => b.numericId.compareTo(a.numericId));
+                _controller.sort((a, b) => a.numericId.compareTo(b.numericId));
               },
               child: const Text('مرتب‌سازی')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
-                  test: (item) => item.numericId == 10,
-                  estimatedItemHeight: 110,
+                  test: (item) => item.numericId == 999,
                 );
               },
-              child: const Text('برو به آیتم ۱۰')),
+              child: const Text('برو به آیتم ۹۹۹')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
-                  test: (item) => item.numericId == 45,
-                  estimatedItemHeight: 110,
+                  test: (item) => item.numericId == 500,
                   animation: QuantumScrollAnimation.bouncy,
-                  duration: const Duration(milliseconds: 1500),
+                  duration: const Duration(milliseconds: 2000),
                 );
               },
-              child: const Text('برو به ۴۵ (فنری)')),
+              child: const Text('برو به ۵۰۰ (فنری)')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
                   test: (item) => item.numericId == 2,
-                  estimatedItemHeight: 110,
-                  animation: QuantumScrollAnimation.bouncy,
                 );
               },
-              child: const Text('برو به ۲ (آهسته)')),
+              child: const Text('برو به ۲')),
         ],
       ),
     );

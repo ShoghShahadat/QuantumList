@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'models.dart';
 
-/// کنترلر اصلی که اکنون از جابجایی آیتم‌ها نیز پشتیبانی می‌کند.
-/// The main controller, now supporting item moving.
+/// The main controller, now with a built-in height cache for hyper-accurate scrolling.
 class QuantumListController<T> {
   @protected
   final List<T> items;
+
+  /// **[اصلاح شده]** حافظه پنهان برای نگهداری ارتفاع آیتم‌ها.
+  @protected
+  final Map<int, double> heightCache = {};
 
   @protected
   final StreamController<int> updateNotifier =
@@ -21,15 +24,35 @@ class QuantumListController<T> {
       StreamController<RemovedItem<T>>.broadcast();
   @protected
   final StreamController<MovedItem> moveNotifier =
-      StreamController<MovedItem>.broadcast(); // **[جدید]**
+      StreamController<MovedItem>.broadcast();
 
   Stream<int> get updateStream => updateNotifier.stream;
   Stream<int> get addStream => addNotifier.stream;
   Stream<int> get insertStream => insertNotifier.stream;
   Stream<RemovedItem<T>> get removeStream => removeNotifier.stream;
-  Stream<MovedItem> get moveStream => moveNotifier.stream; // **[جدید]**
+  Stream<MovedItem> get moveStream => moveNotifier.stream;
 
   QuantumListController(List<T> initialItems) : items = List.from(initialItems);
+
+  /// متدی برای ثبت یا به‌روزرسانی ارتفاع یک آیتم در حافظه.
+  void registerItemHeight(int index, double height) {
+    if (heightCache[index] != height) {
+      heightCache[index] = height;
+    }
+  }
+
+  /// **[جدید]** میانگین ارتفاع آیتم‌های موجود در حافظه را محاسبه می‌کند.
+  /// **[New]** Calculates the average height of items currently in the cache.
+  double getAverageItemHeight() {
+    if (heightCache.isEmpty) {
+      return 100.0; // A reasonable fallback if we know nothing.
+    }
+    double totalHeight = 0;
+    heightCache.forEach((key, value) {
+      totalHeight += value;
+    });
+    return totalHeight / heightCache.length;
+  }
 
   void add(T item) {
     final newIndex = items.length;
@@ -39,17 +62,18 @@ class QuantumListController<T> {
 
   void insert(int index, T item) {
     items.insert(index, item);
+    _shiftCacheKeys(startingFrom: index, by: 1);
     insertNotifier.add(index);
   }
 
   void removeAt(int index) {
     if (index >= 0 && index < items.length) {
       final T removedItem = items.removeAt(index);
+      _shiftCacheKeys(startingFrom: index, by: -1);
       removeNotifier.add(RemovedItem(index, removedItem));
     }
   }
 
-  /// **[جدید]** یک آیتم را از یک ایندکس به ایندکس دیگر منتقل می‌کند.
   void move(int oldIndex, int newIndex) {
     if (oldIndex >= 0 &&
         oldIndex < items.length &&
@@ -57,8 +81,28 @@ class QuantumListController<T> {
         newIndex < items.length) {
       final T item = items.removeAt(oldIndex);
       items.insert(newIndex, item);
+
+      // Invalidate cache for moved items
+      final oldHeight = heightCache.remove(oldIndex);
+      if (oldHeight != null) {
+        heightCache[newIndex] = oldHeight;
+      }
+
       moveNotifier.add(MovedItem(oldIndex, newIndex));
     }
+  }
+
+  void _shiftCacheKeys({required int startingFrom, required int by}) {
+    final newCache = <int, double>{};
+    heightCache.forEach((key, value) {
+      if (key < startingFrom) {
+        newCache[key] = value;
+      } else {
+        newCache[key + by] = value;
+      }
+    });
+    heightCache.clear();
+    heightCache.addAll(newCache);
   }
 
   void updateProperty(int index, Function(T item) updateLogic) {
@@ -76,6 +120,6 @@ class QuantumListController<T> {
     addNotifier.close();
     insertNotifier.close();
     removeNotifier.close();
-    moveNotifier.close(); // **[جدید]**
+    moveNotifier.close();
   }
 }

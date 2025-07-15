@@ -8,10 +8,10 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
   @protected
   ScrollController? scrollController;
 
+  /// The internal callback to the widget to perform the scroll.
   Future<void> Function(int index,
       {required Duration duration,
       required Curve curve,
-      required double estimatedItemHeight,
       double alignment})? _ensureVisibleCallback;
 
   ScrollableQuantumListController(super.initialItems);
@@ -24,16 +24,15 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
       Future<void> Function(int index,
               {required Duration duration,
               required Curve curve,
-              required double estimatedItemHeight,
               double alignment})
           callback) {
     _ensureVisibleCallback = callback;
   }
 
-  /// Scrolls to an item using a robust two-step process.
+  /// **[نهایی]** با استفاده از موتور کاوش و محاسبه، به سمت آیتم مورد نظر حرکت می‌کند.
+  /// **[Final]** Scrolls to an item using the new Explore & Calculate engine.
   Future<void> scrollToItem({
     required bool Function(T item) test,
-    required double estimatedItemHeight,
     Duration duration = const Duration(milliseconds: 800),
     QuantumScrollAnimation animation = QuantumScrollAnimation.smooth,
     double alignment = 0.0,
@@ -46,14 +45,13 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
       return;
     }
 
-    // **[FIXED & EXPANDED]** Mapping the enum to the correct Curve.
     final Curve curve;
     switch (animation) {
       case QuantumScrollAnimation.accelerated:
         curve = Curves.easeIn;
         break;
       case QuantumScrollAnimation.bouncy:
-        curve = Curves.elasticOut; // This is the real bouncy curve
+        curve = Curves.elasticOut;
         break;
       case QuantumScrollAnimation.decelerated:
         curve = Curves.easeOut;
@@ -67,12 +65,12 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
         break;
     }
 
+    // Trigger the new, intelligent search and scroll mechanism.
     await _ensureVisibleCallback?.call(
       index,
       duration: duration,
       curve: curve,
       alignment: alignment,
-      estimatedItemHeight: estimatedItemHeight,
     );
   }
 }
