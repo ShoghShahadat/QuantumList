@@ -62,6 +62,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   }
 
   void _showSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
@@ -94,10 +95,60 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           ),
         ],
       ),
-      body: QuantumList<SampleItem>(
-        key: ValueKey(_listType),
+      body: _buildList(),
+      bottomNavigationBar: _buildControlPanel(),
+    );
+  }
+
+  Widget _buildList() {
+    final itemBuilder = (BuildContext context, int index, SampleItem item,
+        Animation<double> animation) {
+      return QuantumAnimations.scaleIn(
+        context,
+        AnimatedBorderCard(
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () {
+              _controller.updateProperty(index, (itemToUpdate) {
+                itemToUpdate.counter++;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  QuantumAtom(
+                    controller: _controller,
+                    index: index,
+                    builder: (context) => Text('تعداد کلیک: ${item.counter}'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        animation,
+      );
+    };
+
+    if (_listType == QuantumListType.list) {
+      return QuantumList<SampleItem>(
+        key: const Key('quantum_list_list_view'),
         controller: _controller,
-        type: _listType,
+        type: QuantumListType.list,
+        padding: const EdgeInsets.all(8),
+        animationBuilder: itemBuilder,
+      );
+    } else {
+      return QuantumList<SampleItem>(
+        key: const Key('quantum_list_grid_view'),
+        controller: _controller,
+        type: QuantumListType.grid,
         padding: const EdgeInsets.all(8),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -105,44 +156,9 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           mainAxisSpacing: 8,
           childAspectRatio: 1.6,
         ),
-        animationBuilder: (context, index, item, animation) {
-          return QuantumAnimations.scaleIn(
-            context,
-            AnimatedBorderCard(
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                onTap: () {
-                  _controller.updateProperty(index, (itemToUpdate) {
-                    itemToUpdate.counter++;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(item.title,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      // **FIX:** Using the new QuantumAtom widget
-                      QuantumAtom(
-                        controller: _controller,
-                        index: index,
-                        builder: (context) =>
-                            Text('تعداد کلیک: ${item.counter}'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            animation,
-          );
-        },
-      ),
-      bottomNavigationBar: _buildControlPanel(),
-    );
+        animationBuilder: itemBuilder,
+      );
+    }
   }
 
   Widget _buildControlPanel() {
@@ -177,7 +193,8 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
               child: const Text('حذف فیلتر')),
           ElevatedButton(
               onPressed: () {
-                _controller.scrollToIndex(10, estimatedItemHeight: 110);
+                // **FIX:** Using the new, reliable scrollToIndex method with an estimated height.
+                _controller.scrollToIndex(10, estimatedItemHeight: 110.0);
               },
               child: const Text('برو به آیتم ۱۰')),
           ElevatedButton(

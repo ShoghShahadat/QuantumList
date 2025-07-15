@@ -17,8 +17,7 @@ import 'src/controllers/scrollable_quantum_list_controller.dart';
 import 'src/enums.dart';
 import 'src/models.dart';
 
-/// ویجت قدرتمند کوانتوم لیست - نسخه 1.4.1 با اصلاحات حیاتی
-/// The powerful QuantumList widget - Version 1.4.1 with critical fixes
+/// The powerful QuantumList widget - Version 1.4.3 with professional scrolling
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -61,18 +60,14 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   final Map<int, BuildContext> _contextMap = {};
 
   dynamic get _animatedState {
-    if (_listKey.currentState is AnimatedListState) {
+    if (_listKey.currentState is AnimatedListState)
       return _listKey.currentState as AnimatedListState;
-    }
-    if (_listKey.currentState is SliverAnimatedListState) {
+    if (_listKey.currentState is SliverAnimatedListState)
       return _listKey.currentState as SliverAnimatedListState;
-    }
-    if (_listKey.currentState is AnimatedGridState) {
+    if (_listKey.currentState is AnimatedGridState)
       return _listKey.currentState as AnimatedGridState;
-    }
-    if (_listKey.currentState is SliverAnimatedGridState) {
+    if (_listKey.currentState is SliverAnimatedGridState)
       return _listKey.currentState as SliverAnimatedGridState;
-    }
     return null;
   }
 
@@ -100,28 +95,38 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           widget.controller as ScrollableQuantumListController;
       scrollableController.attachScrollController(_scrollController);
       scrollableController.attachRectCallback(_getRectForIndex);
+      // **FIX:** Re-attaching the ensureVisible callback.
+      scrollableController.attachEnsureVisibleCallback(_ensureVisible);
     }
 
     _subscribeToEvents();
   }
 
   Rect? _getRectForIndex(int index) {
-    if (!_contextMap.containsKey(index)) {
+    if (!_contextMap.containsKey(index) || !_contextMap[index]!.mounted) {
+      _contextMap.remove(index);
       return null;
     }
     final context = _contextMap[index]!;
-    // **FIX:** Added a guard to check if the context is still mounted (active) in the tree.
-    if (!context.mounted) {
-      _contextMap.remove(index); // Clean up defunct context
-      return null;
-    }
     final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      return null;
-    }
+    if (renderBox == null) return null;
     final position = renderBox.localToGlobal(Offset.zero);
     return Rect.fromLTWH(
         position.dx, position.dy, renderBox.size.width, renderBox.size.height);
+  }
+
+  // **FIX:** The ensureVisible implementation, now used as the second step of scrolling.
+  Future<void> _ensureVisible(int index,
+      {Duration? duration, Curve? curve, double? alignment}) async {
+    if (!_contextMap.containsKey(index) || !_contextMap[index]!.mounted) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      _contextMap[index]!,
+      duration: duration ?? const Duration(milliseconds: 400),
+      curve: curve ?? Curves.easeInOut,
+      alignment: alignment ?? 0.0,
+    );
   }
 
   void _subscribeToEvents() {
@@ -133,9 +138,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     });
     _removeSubscription =
         widget.controller.removeStream.listen((RemovedItem<T> removed) {
-      if (_animatedState == null) {
-        return;
-      }
+      if (_animatedState == null) return;
       _contextMap.remove(removed.index);
       _animatedState.removeItem(
         removed.index,
@@ -192,10 +195,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           key: _listKey as GlobalKey<AnimatedListState>,
           controller: _scrollController,
           initialItemCount: itemCount,
-          scrollDirection: widget.scrollDirection,
-          physics: widget.physics,
-          reverse: widget.reverse,
-          padding: widget.padding,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
         );
@@ -205,9 +204,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           controller: _scrollController,
           initialItemCount: itemCount,
           gridDelegate: widget.gridDelegate!,
-          physics: widget.physics,
-          reverse: widget.reverse,
-          padding: widget.padding,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
         );
