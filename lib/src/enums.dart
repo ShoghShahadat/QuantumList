@@ -2,26 +2,49 @@
 /// Defines the layout type for the list.
 enum QuantumListType {
   /// چیدمان لیستی استاندارد (عمودی یا افقی)
-  /// Standard list layout (vertical or horizontal).
   list,
 
   /// چیدمان شبکه‌ای (گرید)
-  /// Grid layout.
   grid,
 }
 
-/// **[جدید]** نوع انیمیشن اسکرول را برای متد scrollOrJumpToIndex مشخص می‌کند.
-/// **[New]** Defines the type of scroll animation for the scrollOrJumpToIndex method.
+/// **[اصلاح شده]** انواع انیمیشن اسکرول را برای متد scrollToItem مشخص می‌کند.
+/// **[Updated]** Defines the type of scroll animation for the scrollToItem method.
 enum QuantumScrollAnimation {
-  /// انیمیشن نرم و روان (پیش‌فرض)
-  /// Smooth ease-in-out animation (default).
+  /// انیمیشن نرم و روان
   smooth,
 
   /// انیمیشن با شتاب در ابتدا
-  /// Accelerating animation.
   accelerated,
 
   /// انیمیشن فنری و جهنده
-  /// Bouncy, elastic animation.
   bouncy,
+
+  /// **[جدید]** انیمیشن با کاهش شتاب در انتها
+  decelerated,
+
+  /// **[جدید]** انیمیشن خطی با سرعت ثابت
+  linear,
+}
+
+/// **[جدید]** انواع انیمیشن‌های ورودی برای آیتم‌های لیست.
+/// **[New]** Defines the entrance animation types for list items.
+enum QuantumAnimationType {
+  /// محو شدن
+  fadeIn,
+
+  /// بزرگ شدن
+  scaleIn,
+
+  /// اسلاید از پایین
+  slideInFromBottom,
+
+  /// اسلاید از چپ
+  slideInFromLeft,
+
+  /// **[جدید]** اسلاید از راست
+  slideInFromRight,
+
+  /// **[جدید]** چرخش سه‌بعدی حول محور Y
+  flipInY,
 }

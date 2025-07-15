@@ -11,7 +11,7 @@ class QuantumExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList Example V2.2',
+      title: 'QuantumList Example V2.3',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -51,6 +51,8 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   late final FilterableQuantumListController<SampleItem> _controller;
   QuantumListType _listType = QuantumListType.list;
   int _nextItemId = 51;
+  QuantumAnimationType _animationType =
+      QuantumAnimationType.scaleIn; // **[جدید]**
 
   @override
   void initState() {
@@ -81,8 +83,9 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuantumList V2.2 - معماری نهایی'),
+        title: const Text('QuantumList V2.3 - زرادخانه انیمیشن'),
         actions: [
+          _buildAnimationSelector(), // **[جدید]**
           IconButton(
             icon: Icon(_listType == QuantumListType.list
                 ? Icons.grid_view
@@ -102,45 +105,76 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
     );
   }
 
+  // **[جدید]** ویجت انتخاب‌گر انیمیشن
+  Widget _buildAnimationSelector() {
+    return PopupMenuButton<QuantumAnimationType>(
+      icon: const Icon(Icons.animation),
+      onSelected: (QuantumAnimationType result) {
+        setState(() {
+          _animationType = result;
+        });
+      },
+      itemBuilder: (BuildContext context) =>
+          <PopupMenuEntry<QuantumAnimationType>>[
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.scaleIn,
+          child: Text('بزرگ شدن'),
+        ),
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.fadeIn,
+          child: Text('محو شدن'),
+        ),
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.slideInFromBottom,
+          child: Text('اسلاید از پایین'),
+        ),
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.slideInFromLeft,
+          child: Text('اسلاید از چپ'),
+        ),
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.slideInFromRight,
+          child: Text('اسلاید از راست'),
+        ),
+        const PopupMenuItem<QuantumAnimationType>(
+          value: QuantumAnimationType.flipInY,
+          child: Text('چرخش سه‌بعدی'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildList() {
     final itemBuilder = (BuildContext context, int index, SampleItem item,
         Animation<double> animation) {
-      return QuantumAnimations.scaleIn(
-        context,
-        AnimatedBorderCard(
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            onTap: () {
-              _controller.updateProperty(index, (itemToUpdate) {
-                itemToUpdate.counter++;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(item.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  QuantumAtom(
-                    controller: _controller,
-                    index: index,
-                    builder: (context) => Text('تعداد کلیک: ${item.counter}'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        animation,
-      );
+      // **[جدید]** انتخاب انیمیشن بر اساس انتخاب کاربر
+      switch (_animationType) {
+        case QuantumAnimationType.fadeIn:
+          return QuantumAnimations.fadeIn(
+              context, _buildCard(index, item), animation);
+        case QuantumAnimationType.slideInFromBottom:
+          return QuantumAnimations.slideInFromBottom(
+              context, _buildCard(index, item), animation);
+        case QuantumAnimationType.slideInFromLeft:
+          return QuantumAnimations.slideInFromLeft(
+              context, _buildCard(index, item), animation);
+        case QuantumAnimationType.slideInFromRight:
+          return QuantumAnimations.slideInFromRight(
+              context, _buildCard(index, item), animation);
+        case QuantumAnimationType.flipInY:
+          return QuantumAnimations.flipInY(
+              context, _buildCard(index, item), animation);
+        case QuantumAnimationType.scaleIn:
+        default:
+          return QuantumAnimations.scaleIn(
+              context, _buildCard(index, item), animation);
+      }
     };
 
     if (_listType == QuantumListType.list) {
       return QuantumList<SampleItem>(
-        key: const Key('quantum_list_list_view'),
+        key: ValueKey(
+            _animationType.toString() + '_list'), // Key must change to rebuild
         controller: _controller,
         type: QuantumListType.list,
         padding: const EdgeInsets.all(8),
@@ -148,7 +182,8 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
       );
     } else {
       return QuantumList<SampleItem>(
-        key: const Key('quantum_list_grid_view'),
+        key: ValueKey(
+            _animationType.toString() + '_grid'), // Key must change to rebuild
         controller: _controller,
         type: QuantumListType.grid,
         padding: const EdgeInsets.all(8),
@@ -161,6 +196,36 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
         animationBuilder: itemBuilder,
       );
     }
+  }
+
+  Widget _buildCard(int index, SampleItem item) {
+    return AnimatedBorderCard(
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () {
+          _controller.updateProperty(index, (itemToUpdate) {
+            itemToUpdate.counter++;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(item.title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              QuantumAtom(
+                controller: _controller,
+                index: index,
+                builder: (context) => Text('تعداد کلیک: ${item.counter}'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildControlPanel() {
@@ -187,12 +252,12 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
               onPressed: () {
                 _controller.sort((a, b) => b.numericId.compareTo(a.numericId));
               },
-              child: const Text('مرتب‌سازی (نزولی)')),
+              child: const Text('مرتب‌سازی')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
                   test: (item) => item.numericId == 10,
-                  estimatedItemHeight: 110, // Provide an estimate
+                  estimatedItemHeight: 110,
                 );
               },
               child: const Text('برو به آیتم ۱۰')),
@@ -205,15 +270,16 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
                   duration: const Duration(milliseconds: 1500),
                 );
               },
-              child: const Text('برو به آیتم ۴۵ (فنری)')),
+              child: const Text('برو به ۴۵ (فنری)')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
                   test: (item) => item.numericId == 2,
                   estimatedItemHeight: 110,
+                  animation: QuantumScrollAnimation.bouncy,
                 );
               },
-              child: const Text('برو به آیتم ۲')),
+              child: const Text('برو به ۲ (آهسته)')),
         ],
       ),
     );

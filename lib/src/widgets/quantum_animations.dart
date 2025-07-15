@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 /// یک کتابخانه از توابع کمکی برای ساخت انیمیشن‌های ورود زیبا و آماده.
 /// A library of helper functions for creating beautiful, pre-built entrance animations.
 class QuantumAnimations {
   /// انیمیشن محو شدن (FadeIn) برای آیتم ورودی.
-  /// A fade-in animation for the entering item.
   static Widget fadeIn(
     BuildContext context,
     Widget child,
@@ -14,7 +14,6 @@ class QuantumAnimations {
   }
 
   /// انیمیشن اسلاید و محو شدن از پایین.
-  /// A slide and fade-in animation from the bottom.
   static Widget slideInFromBottom(
     BuildContext context,
     Widget child,
@@ -34,7 +33,6 @@ class QuantumAnimations {
   }
 
   /// انیمیشن اسلاید و محو شدن از چپ.
-  /// A slide and fade-in animation from the left.
   static Widget slideInFromLeft(
     BuildContext context,
     Widget child,
@@ -53,8 +51,27 @@ class QuantumAnimations {
     );
   }
 
+  /// **[جدید]** انیمیشن اسلاید و محو شدن از راست.
+  /// **[New]** A slide and fade-in animation from the right.
+  static Widget slideInFromRight(
+    BuildContext context,
+    Widget child,
+    Animation<double> animation, {
+    double slideOffset = 50.0,
+  }) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: Offset(slideOffset / 100, 0),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+        child: child,
+      ),
+    );
+  }
+
   /// انیمیشن بزرگ شدن و محو شدن (Scale & Fade).
-  /// A scale and fade-in animation.
   static Widget scaleIn(
     BuildContext context,
     Widget child,
@@ -66,6 +83,29 @@ class QuantumAnimations {
         scale: CurvedAnimation(parent: animation, curve: Curves.easeOut),
         child: child,
       ),
+    );
+  }
+
+  /// **[جدید]** انیمیشن چرخش سه‌بعدی حول محور Y.
+  /// **[New]** A 3D flip animation around the Y axis.
+  static Widget flipInY(
+    BuildContext context,
+    Widget child,
+    Animation<double> animation,
+  ) {
+    final a = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+    return AnimatedBuilder(
+      animation: a,
+      child: child,
+      builder: (context, child) {
+        return Transform(
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.001) // perspective
+            ..rotateY(math.pi * (1 - a.value)),
+          alignment: Alignment.center,
+          child: child,
+        );
+      },
     );
   }
 }

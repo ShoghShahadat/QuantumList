@@ -30,7 +30,7 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
     _ensureVisibleCallback = callback;
   }
 
-  /// **[RE-ARCHITECTED]** Scrolls to an item using a robust two-step process.
+  /// Scrolls to an item using a robust two-step process.
   Future<void> scrollToItem({
     required bool Function(T item) test,
     required double estimatedItemHeight,
@@ -46,13 +46,20 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
       return;
     }
 
+    // **[FIXED & EXPANDED]** Mapping the enum to the correct Curve.
     final Curve curve;
     switch (animation) {
       case QuantumScrollAnimation.accelerated:
         curve = Curves.easeIn;
         break;
       case QuantumScrollAnimation.bouncy:
-        curve = Curves.elasticOut;
+        curve = Curves.elasticOut; // This is the real bouncy curve
+        break;
+      case QuantumScrollAnimation.decelerated:
+        curve = Curves.easeOut;
+        break;
+      case QuantumScrollAnimation.linear:
+        curve = Curves.linear;
         break;
       case QuantumScrollAnimation.smooth:
       default:
