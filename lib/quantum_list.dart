@@ -4,22 +4,26 @@ import 'dart:async';
 // Exporting the public parts of the package
 export 'src/quantum_list_controller.dart';
 export 'src/controllers/filterable_quantum_list_controller.dart';
-export 'src/controllers/scrollable_quantum_list_controller.dart'; // Export جدید
+export 'src/controllers/scrollable_quantum_list_controller.dart';
+export 'src/controllers/notifying_quantum_list_controller.dart';
 export 'src/atom_extension.dart';
 export 'src/enums.dart';
 export 'src/widgets/animated_border_card.dart';
+export 'src/widgets/quantum_animations.dart';
 
 // Importing internal implementation
 import 'src/quantum_list_controller.dart';
 import 'src/controllers/scrollable_quantum_list_controller.dart';
-import 'src/models.dart';
 import 'src/enums.dart';
+import 'src/models.dart';
 
-/// ویجت قدرتمند کوانتوم لیست - نسخه 0.9 با قابلیت مدیریت اسکرول
-/// The powerful QuantumList widget - Version 0.9 with scroll management
+/// ویجت قدرتمند کوانتوم لیست - نسخه 1.3.2 با اصلاحات نهایی
+/// The powerful QuantumList widget - Version 1.3.2 with final fixes
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
-  final Widget Function(BuildContext context, int index, T item, Animation<double> animation) animationBuilder;
+  final Widget Function(
+          BuildContext context, int index, T item, Animation<double> animation)
+      animationBuilder;
   final QuantumListType type;
   final bool isSliver;
   final SliverGridDelegate? gridDelegate;
@@ -54,11 +58,21 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   StreamSubscription? _insertSubscription;
   StreamSubscription? _removeSubscription;
 
+  final Map<int, BuildContext> _contextMap = {};
+
   dynamic get _animatedState {
-    if (_listKey.currentState is AnimatedListState) return _listKey.currentState as AnimatedListState;
-    if (_listKey.currentState is SliverAnimatedListState) return _listKey.currentState as SliverAnimatedListState;
-    if (_listKey.currentState is AnimatedGridState) return _listKey.currentState as AnimatedGridState;
-    if (_listKey.currentState is SliverAnimatedGridState) return _listKey.currentState as SliverAnimatedGridState;
+    if (_listKey.currentState is AnimatedListState) {
+      return _listKey.currentState as AnimatedListState;
+    }
+    if (_listKey.currentState is SliverAnimatedListState) {
+      return _listKey.currentState as SliverAnimatedListState;
+    }
+    if (_listKey.currentState is AnimatedGridState) {
+      return _listKey.currentState as AnimatedGridState;
+    }
+    if (_listKey.currentState is SliverAnimatedGridState) {
+      return _listKey.currentState as SliverAnimatedGridState;
+    }
     return null;
   }
 
@@ -66,18 +80,44 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _listKey = widget.isSliver
-        ? GlobalKey(debugLabel: 'SliverQuantumList')
-        : (widget.type == QuantumListType.list
-            ? GlobalKey<AnimatedListState>(debugLabel: 'QuantumList')
-            : GlobalKey<AnimatedGridState>(debugLabel: 'QuantumGrid'));
-    
-    // اگر کنترلر از نوع اسکرول‌پذیر بود، ScrollController را به آن متصل کن
-    if (widget.controller is ScrollableQuantumListController) {
-      (widget.controller as ScrollableQuantumListController).attachScrollController(_scrollController);
+
+    // **FIX:** Using nested if/else to avoid type inference issues with ternary operators.
+    if (widget.isSliver) {
+      if (widget.type == QuantumListType.list) {
+        _listKey = GlobalKey<SliverAnimatedListState>();
+      } else {
+        _listKey = GlobalKey<SliverAnimatedGridState>();
+      }
+    } else {
+      if (widget.type == QuantumListType.list) {
+        _listKey = GlobalKey<AnimatedListState>();
+      } else {
+        _listKey = GlobalKey<AnimatedGridState>();
+      }
     }
-    
+
+    if (widget.controller is ScrollableQuantumListController) {
+      final scrollableController =
+          widget.controller as ScrollableQuantumListController;
+      scrollableController.attachScrollController(_scrollController);
+      scrollableController.attachRectCallback(_getRectForIndex);
+    }
+
     _subscribeToEvents();
+  }
+
+  Rect? _getRectForIndex(int index) {
+    if (!_contextMap.containsKey(index)) {
+      return null;
+    }
+    final context = _contextMap[index]!;
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) {
+      return null;
+    }
+    final position = renderBox.localToGlobal(Offset.zero);
+    return Rect.fromLTWH(
+        position.dx, position.dy, renderBox.size.width, renderBox.size.height);
   }
 
   void _subscribeToEvents() {
@@ -87,11 +127,17 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _insertSubscription = widget.controller.insertStream.listen((index) {
       _animatedState?.insertItem(index, duration: widget.animationDuration);
     });
-    _removeSubscription = widget.controller.removeStream.listen((removed) {
-      if (_animatedState == null) return;
+    // **FIX:** Explicitly typing `removed` to satisfy some analyzer versions and added braces.
+    _removeSubscription =
+        widget.controller.removeStream.listen((RemovedItem<T> removed) {
+      if (_animatedState == null) {
+        return;
+      }
+      _contextMap.remove(removed.index);
       _animatedState.removeItem(
         removed.index,
-        (context, animation) => widget.animationBuilder(context, removed.index, removed.item, animation),
+        (context, animation) => widget.animationBuilder(
+            context, removed.index, removed.item, animation),
         duration: widget.animationDuration,
       );
     });
@@ -117,12 +163,23 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   }
 
   Widget _buildSliver(int itemCount) {
-    // Sliverها ScrollController را از CustomScrollView والد خود می‌گیرند.
-    // Slivers get their ScrollController from the parent CustomScrollView.
-    // بنابراین ما در اینجا کنترلر داخلی را به آن‌ها نمی‌دهیم.
-    // So we don't assign our internal controller here.
-    // ...
-    return Text("Sliver scroll control needs parent CustomScrollView");
+    switch (widget.type) {
+      case QuantumListType.list:
+        return SliverAnimatedList(
+          key: _listKey as GlobalKey<SliverAnimatedListState>,
+          initialItemCount: itemCount,
+          itemBuilder: (context, index, animation) =>
+              _itemBuilder(context, index, animation),
+        );
+      case QuantumListType.grid:
+        return SliverAnimatedGrid(
+          key: _listKey as GlobalKey<SliverAnimatedGridState>,
+          initialItemCount: itemCount,
+          gridDelegate: widget.gridDelegate!,
+          itemBuilder: (context, index, animation) =>
+              _itemBuilder(context, index, animation),
+        );
+    }
   }
 
   Widget _buildRegular(int itemCount) {
@@ -136,7 +193,8 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           physics: widget.physics,
           reverse: widget.reverse,
           padding: widget.padding,
-          itemBuilder: (context, index, animation) => _itemBuilder(context, index, animation),
+          itemBuilder: (context, index, animation) =>
+              _itemBuilder(context, index, animation),
         );
       case QuantumListType.grid:
         return AnimatedGrid(
@@ -147,13 +205,23 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           physics: widget.physics,
           reverse: widget.reverse,
           padding: widget.padding,
-          itemBuilder: (context, index, animation) => _itemBuilder(context, index, animation),
+          itemBuilder: (context, index, animation) =>
+              _itemBuilder(context, index, animation),
         );
     }
   }
 
-  Widget _itemBuilder(BuildContext context, int index, Animation<double> animation) {
-    if (index >= widget.controller.length) return const SizedBox.shrink();
-    return widget.animationBuilder(context, index, widget.controller[index], animation);
+  Widget _itemBuilder(
+      BuildContext context, int index, Animation<double> animation) {
+    if (index >= widget.controller.length) {
+      return const SizedBox.shrink();
+    }
+    return Builder(
+      builder: (itemContext) {
+        _contextMap[index] = itemContext;
+        return widget.animationBuilder(
+            context, index, widget.controller[index], animation);
+      },
+    );
   }
 }
