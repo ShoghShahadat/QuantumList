@@ -36,6 +36,8 @@ class SampleItem {
   int counter;
 
   SampleItem({required this.id, required this.title, this.counter = 0});
+
+  int get numericId => int.tryParse(title.split(' ').last) ?? 0;
 }
 
 class QuantumHomePage extends StatefulWidget {
@@ -193,21 +195,37 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
               child: const Text('حذف فیلتر')),
           ElevatedButton(
               onPressed: () {
-                // **FIX:** Using the new, reliable scrollToIndex method with an estimated height.
-                _controller.scrollToIndex(10, estimatedItemHeight: 110.0);
+                _controller.sort((a, b) => a.numericId.compareTo(b.numericId));
               },
-              child: const Text('برو به آیتم ۱۰')),
+              child: const Text('مرتب‌سازی (صعودی)')),
+          // **[اصلاح شده]** استفاده از متد جدید و دقیق scrollToItem
           ElevatedButton(
               onPressed: () {
-                final rect = _controller.getRectForIndex(2);
-                if (rect != null) {
-                  _showSnackBar(
-                      'موقعیت آیتم ۲: ${rect.top.toStringAsFixed(1)}px از بالا');
-                } else {
-                  _showSnackBar('آیتم ۲ روی صفحه نیست!');
-                }
+                _controller.scrollToItem(
+                  test: (item) => item.numericId == 10,
+                  estimatedItemHeight: 110.0,
+                  duration: Duration.zero,
+                );
               },
-              child: const Text('موقعیت آیتم ۲')),
+              child: const Text('پرش به آیتم ۱۰')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.scrollToItem(
+                  test: (item) => item.numericId == 10,
+                  estimatedItemHeight: 110.0,
+                );
+              },
+              child: const Text('اسکرول نرم به ۱۰')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.scrollToItem(
+                  test: (item) => item.numericId == 10,
+                  estimatedItemHeight: 110.0,
+                  animation: QuantumScrollAnimation.bouncy,
+                  duration: const Duration(milliseconds: 1200),
+                );
+              },
+              child: const Text('اسکرول فنری به ۱۰')),
         ],
       ),
     );
