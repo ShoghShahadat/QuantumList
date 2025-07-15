@@ -17,7 +17,7 @@ import 'src/controllers/scrollable_quantum_list_controller.dart';
 import 'src/enums.dart';
 import 'src/models.dart';
 
-/// The powerful QuantumList widget - Version 1.4.3 with professional scrolling
+/// The powerful QuantumList widget - Version 2.2.0 with the final scrolling engine
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -40,7 +40,7 @@ class QuantumList<T> extends StatefulWidget {
     this.isSliver = false,
     this.gridDelegate,
     this.scrollDirection = Axis.vertical,
-    this.animationDuration = const Duration(milliseconds: 300),
+    this.animationDuration = const Duration(milliseconds: 400),
     this.physics,
     this.reverse = false,
     this.padding,
@@ -56,18 +56,23 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   StreamSubscription? _addSubscription;
   StreamSubscription? _insertSubscription;
   StreamSubscription? _removeSubscription;
+  StreamSubscription? _moveSubscription;
 
   final Map<int, BuildContext> _contextMap = {};
 
   dynamic get _animatedState {
-    if (_listKey.currentState is AnimatedListState)
+    if (_listKey.currentState is AnimatedListState) {
       return _listKey.currentState as AnimatedListState;
-    if (_listKey.currentState is SliverAnimatedListState)
+    }
+    if (_listKey.currentState is SliverAnimatedListState) {
       return _listKey.currentState as SliverAnimatedListState;
-    if (_listKey.currentState is AnimatedGridState)
+    }
+    if (_listKey.currentState is AnimatedGridState) {
       return _listKey.currentState as AnimatedGridState;
-    if (_listKey.currentState is SliverAnimatedGridState)
+    }
+    if (_listKey.currentState is SliverAnimatedGridState) {
       return _listKey.currentState as SliverAnimatedGridState;
+    }
     return null;
   }
 
@@ -94,39 +99,97 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       final scrollableController =
           widget.controller as ScrollableQuantumListController;
       scrollableController.attachScrollController(_scrollController);
-      scrollableController.attachRectCallback(_getRectForIndex);
-      // **FIX:** Re-attaching the ensureVisible callback.
       scrollableController.attachEnsureVisibleCallback(_ensureVisible);
     }
 
     _subscribeToEvents();
   }
 
-  Rect? _getRectForIndex(int index) {
-    if (!_contextMap.containsKey(index) || !_contextMap[index]!.mounted) {
-      _contextMap.remove(index);
-      return null;
-    }
-    final context = _contextMap[index]!;
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return null;
-    final position = renderBox.localToGlobal(Offset.zero);
-    return Rect.fromLTWH(
-        position.dx, position.dy, renderBox.size.width, renderBox.size.height);
-  }
-
-  // **FIX:** The ensureVisible implementation, now used as the second step of scrolling.
+  /// **[RE-ARCHITECTED]** Implements the "Jump & Conquer" strategy.
   Future<void> _ensureVisible(int index,
-      {Duration? duration, Curve? curve, double? alignment}) async {
-    if (!_contextMap.containsKey(index) || !_contextMap[index]!.mounted) {
+      {required Duration duration,
+      required Curve curve,
+      required double estimatedItemHeight,
+      double? alignment}) async {
+    // Step 0: Check if item is already visible. If so, just scroll.
+    if (_contextMap.containsKey(index) && _contextMap[index]!.mounted) {
+      await _performPreciseScroll(index, duration, curve, alignment);
       return;
     }
-    await Scrollable.ensureVisible(
-      _contextMap[index]!,
-      duration: duration ?? const Duration(milliseconds: 400),
-      curve: curve ?? Curves.easeInOut,
-      alignment: alignment ?? 0.0,
+
+    // Step 1: "Jump" - Move to the estimated position to force the item to be built.
+    if (!_scrollController.hasClients) return;
+    final approximateOffset = (index * estimatedItemHeight).clamp(
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
     );
+
+    _scrollController.jumpTo(approximateOffset);
+
+    // Wait for the end of the frame to allow the list to build the new items.
+    await WidgetsBinding.instance.endOfFrame;
+
+    // Step 2: "Conquer" - After the jump, the item should be built. Now perform the final scroll.
+    if (_contextMap.containsKey(index) && _contextMap[index]!.mounted) {
+      await _performPreciseScroll(index, duration, curve, alignment);
+    } else {
+      debugPrint(
+          "QuantumList: Failed to bring item at index $index into view after jump. "
+          "Consider providing a more accurate 'estimatedItemHeight'.");
+    }
+  }
+
+  /// Helper method to perform the final, precise scroll calculation and animation.
+  Future<void> _performPreciseScroll(
+      int index, Duration duration, Curve curve, double? alignment) async {
+    if (!mounted ||
+        !_contextMap.containsKey(index) ||
+        !_contextMap[index]!.mounted ||
+        !_scrollController.hasClients) {
+      return;
+    }
+
+    final listContext = _listKey.currentContext;
+    if (listContext == null) return;
+    final listRenderBox = listContext.findRenderObject() as RenderBox;
+
+    final itemContext = _contextMap[index]!;
+    final itemRenderBox = itemContext.findRenderObject() as RenderBox;
+
+    final position =
+        itemRenderBox.localToGlobal(Offset.zero, ancestor: listRenderBox);
+
+    double targetOffset;
+    final double itemDimension;
+    final double viewportDimension;
+
+    if (widget.scrollDirection == Axis.vertical) {
+      itemDimension = itemRenderBox.size.height;
+      viewportDimension = _scrollController.position.viewportDimension;
+      targetOffset = _scrollController.offset + position.dy;
+    } else {
+      itemDimension = itemRenderBox.size.width;
+      viewportDimension = _scrollController.position.viewportDimension;
+      targetOffset = _scrollController.offset + position.dx;
+    }
+
+    final alignmentValue = alignment ?? 0.0;
+    targetOffset -= (viewportDimension - itemDimension) * alignmentValue;
+
+    targetOffset = targetOffset.clamp(
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    if (duration == Duration.zero) {
+      _scrollController.jumpTo(targetOffset);
+    } else {
+      await _scrollController.animateTo(
+        targetOffset,
+        duration: duration,
+        curve: curve,
+      );
+    }
   }
 
   void _subscribeToEvents() {
@@ -147,6 +210,16 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
         duration: widget.animationDuration,
       );
     });
+    _moveSubscription = widget.controller.moveStream.listen((MovedItem moved) {
+      if (_animatedState == null) return;
+      _animatedState.removeItem(
+        moved.oldIndex,
+        (context, animation) => const SizedBox.shrink(),
+        duration: const Duration(milliseconds: 1),
+      );
+      _animatedState.insertItem(moved.newIndex,
+          duration: widget.animationDuration);
+    });
   }
 
   @override
@@ -155,6 +228,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _addSubscription?.cancel();
     _insertSubscription?.cancel();
     _removeSubscription?.cancel();
+    _moveSubscription?.cancel();
     super.dispose();
   }
 
@@ -172,14 +246,14 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     switch (widget.type) {
       case QuantumListType.list:
         return SliverAnimatedList(
-          key: _listKey as GlobalKey<SliverAnimatedListState>,
+          key: _listKey,
           initialItemCount: itemCount,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
         );
       case QuantumListType.grid:
         return SliverAnimatedGrid(
-          key: _listKey as GlobalKey<SliverAnimatedGridState>,
+          key: _listKey,
           initialItemCount: itemCount,
           gridDelegate: widget.gridDelegate!,
           itemBuilder: (context, index, animation) =>
@@ -192,7 +266,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     switch (widget.type) {
       case QuantumListType.list:
         return AnimatedList(
-          key: _listKey as GlobalKey<AnimatedListState>,
+          key: _listKey,
           controller: _scrollController,
           initialItemCount: itemCount,
           itemBuilder: (context, index, animation) =>
@@ -200,7 +274,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
         );
       case QuantumListType.grid:
         return AnimatedGrid(
-          key: _listKey as GlobalKey<AnimatedGridState>,
+          key: _listKey,
           controller: _scrollController,
           initialItemCount: itemCount,
           gridDelegate: widget.gridDelegate!,
@@ -218,8 +292,11 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     return Builder(
       builder: (itemContext) {
         _contextMap[index] = itemContext;
-        return widget.animationBuilder(
-            context, index, widget.controller[index], animation);
+        if (index < widget.controller.length) {
+          return widget.animationBuilder(
+              context, index, widget.controller[index], animation);
+        }
+        return const SizedBox.shrink();
       },
     );
   }

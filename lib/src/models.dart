@@ -5,3 +5,11 @@ class RemovedItem<T> {
   final T item;
   RemovedItem(this.index, this.item);
 }
+
+/// **[جدید]** یک کلاس کمکی برای نگهداری اطلاعات آیتم جابجا شده.
+/// **[New]** A helper class to hold information about a moved item.
+class MovedItem {
+  final int oldIndex;
+  final int newIndex;
+  MovedItem(this.oldIndex, this.newIndex);
+}

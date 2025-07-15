@@ -11,7 +11,7 @@ class QuantumExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList Example',
+      title: 'QuantumList Example V2.2',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -50,14 +50,14 @@ class QuantumHomePage extends StatefulWidget {
 class _QuantumHomePageState extends State<QuantumHomePage> {
   late final FilterableQuantumListController<SampleItem> _controller;
   QuantumListType _listType = QuantumListType.list;
-  int _nextItemId = 21;
+  int _nextItemId = 51;
 
   @override
   void initState() {
     super.initState();
     _controller = FilterableQuantumListController<SampleItem>(
       List.generate(
-          20, (i) => SampleItem(id: i + 1, title: 'آیتم شماره ${i + 1}')),
+          50, (i) => SampleItem(id: i + 1, title: 'آیتم شماره ${i + 1}')),
       onAtEnd: () => _showSnackBar('به انتهای لیست رسیدید!'),
       onAtStart: () => _showSnackBar('به ابتدای لیست رسیدید!'),
     );
@@ -81,7 +81,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuantumList Demo'),
+        title: const Text('QuantumList V2.2 - معماری نهایی'),
         actions: [
           IconButton(
             icon: Icon(_listType == QuantumListType.list
@@ -174,7 +174,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           ElevatedButton(
               onPressed: () {
                 _controller.add(SampleItem(
-                    id: _nextItemId, title: 'آیتم جدید $_nextItemId'));
+                    id: _nextItemId, title: 'آیتم شماره $_nextItemId'));
                 _nextItemId++;
               },
               child: const Text('افزودن')),
@@ -185,47 +185,35 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
               child: const Text('حذف اولی')),
           ElevatedButton(
               onPressed: () {
-                _controller.filter((item) => item.id % 2 == 0);
+                _controller.sort((a, b) => b.numericId.compareTo(a.numericId));
               },
-              child: const Text('فیلتر (زوج)')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.filter(null);
-              },
-              child: const Text('حذف فیلتر')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.sort((a, b) => a.numericId.compareTo(b.numericId));
-              },
-              child: const Text('مرتب‌سازی (صعودی)')),
-          // **[اصلاح شده]** استفاده از متد جدید و دقیق scrollToItem
+              child: const Text('مرتب‌سازی (نزولی)')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
                   test: (item) => item.numericId == 10,
-                  estimatedItemHeight: 110.0,
-                  duration: Duration.zero,
+                  estimatedItemHeight: 110, // Provide an estimate
                 );
               },
-              child: const Text('پرش به آیتم ۱۰')),
+              child: const Text('برو به آیتم ۱۰')),
           ElevatedButton(
               onPressed: () {
                 _controller.scrollToItem(
-                  test: (item) => item.numericId == 10,
-                  estimatedItemHeight: 110.0,
-                );
-              },
-              child: const Text('اسکرول نرم به ۱۰')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.scrollToItem(
-                  test: (item) => item.numericId == 10,
-                  estimatedItemHeight: 110.0,
+                  test: (item) => item.numericId == 45,
+                  estimatedItemHeight: 110,
                   animation: QuantumScrollAnimation.bouncy,
-                  duration: const Duration(milliseconds: 1200),
+                  duration: const Duration(milliseconds: 1500),
                 );
               },
-              child: const Text('اسکرول فنری به ۱۰')),
+              child: const Text('برو به آیتم ۴۵ (فنری)')),
+          ElevatedButton(
+              onPressed: () {
+                _controller.scrollToItem(
+                  test: (item) => item.numericId == 2,
+                  estimatedItemHeight: 110,
+                );
+              },
+              child: const Text('برو به آیتم ۲')),
         ],
       ),
     );
