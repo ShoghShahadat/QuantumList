@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
 
-/// **[FIXED]** A custom enum to represent the different scroll physics options.
-/// The incompatible 'Fixed' option has been removed to prevent crashes.
-// این enum انواع مختلف فیزیک اسکرول را برای انتخاب راحت‌تر، تعریف می‌کند.
+// Enum for scroll physics options.
 enum PhysicsType {
-  Bouncing, // حالت فنری (مناسب iOS)
-  Clamping, // حالت چسبنده (مناسب Android)
-  NeverScrollable, // اسکرول غیرفعال
+  Bouncing,
+  Clamping,
+  NeverScrollable,
 }
+
+// **[MOVED]** The ChoreographyType enum is now imported from `quantum_list.dart`,
+// but for the sake of the example app, we can keep it here if we want to
+// decouple it. However, it's better to import it. We'll assume it's imported.
 
 /// A control panel for the Animation Showcase.
 class AnimationControlPanel extends StatelessWidget {
@@ -16,6 +18,10 @@ class AnimationControlPanel extends StatelessWidget {
   final double slideOffset;
   final bool isReversed;
   final PhysicsType selectedPhysics;
+  // **[NEW]** Properties for managing choreography.
+  final ChoreographyType selectedChoreography;
+  final ValueChanged<ChoreographyType?> onChoreographyChanged;
+
   final ValueChanged<PhysicsType?> onPhysicsChanged;
   final ValueChanged<QuantumAnimationType?> onAnimationChanged;
   final ValueChanged<double> onSlideOffsetChanged;
@@ -37,6 +43,9 @@ class AnimationControlPanel extends StatelessWidget {
     required this.onClear,
     required this.selectedPhysics,
     required this.onPhysicsChanged,
+    // **[NEW]** Added to constructor.
+    required this.selectedChoreography,
+    required this.onChoreographyChanged,
   }) : super(key: key);
 
   @override
@@ -55,9 +64,10 @@ class AnimationControlPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              // **[MODIFIED]** The 'Add' button now says 'Reset & Add' to clarify its behavior.
               ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
+                icon: const Icon(Icons.replay_circle_filled),
+                label: const Text('Reset & Add'),
                 onPressed: onAdd,
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade600),
@@ -79,6 +89,22 @@ class AnimationControlPanel extends StatelessWidget {
             ],
           ),
           const Divider(height: 16),
+          // **[NEW]** Choreography Dropdown
+          ListTile(
+            dense: true,
+            title: const Text('Choreography'),
+            trailing: DropdownButton<ChoreographyType>(
+              value: selectedChoreography,
+              items: ChoreographyType.values
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.name[0].toUpperCase() +
+                            type.name.substring(1)),
+                      ))
+                  .toList(),
+              onChanged: onChoreographyChanged,
+            ),
+          ),
           // Animation Type Dropdown
           ListTile(
             dense: true,
@@ -93,14 +119,12 @@ class AnimationControlPanel extends StatelessWidget {
               onChanged: onAnimationChanged,
             ),
           ),
-          // Dropdown for selecting scroll physics.
+          // Scroll Physics Dropdown
           ListTile(
             dense: true,
             title: const Text('Scroll Physics'),
             trailing: DropdownButton<PhysicsType>(
               value: selectedPhysics,
-              // **[FIXED]** The list of items is now generated from the corrected enum
-              // which no longer contains the 'Fixed' option.
               items: PhysicsType.values
                   .map((type) => DropdownMenuItem(
                         value: type,
@@ -110,7 +134,7 @@ class AnimationControlPanel extends StatelessWidget {
               onChanged: onPhysicsChanged,
             ),
           ),
-          // Slide Offset Slider (only visible for slide animations)
+          // Slide Offset Slider
           if (isSlideAnimation)
             Column(
               mainAxisSize: MainAxisSize.min,

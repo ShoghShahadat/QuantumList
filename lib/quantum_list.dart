@@ -14,7 +14,10 @@ export 'src/enums.dart';
 export 'src/models.dart';
 export 'src/widgets/animated_border_card.dart';
 export 'src/widgets/quantum_animations.dart';
+export 'src/widgets/quantum_choreography.dart';
 export 'src/widgets/quantum_atom.dart';
+// **[NEW]** Exporting the new modular position tracker.
+export 'src/widgets/quantum_position_tracker.dart';
 export 'src/border/quantum_border.dart';
 export 'src/border/quantum_border_controller.dart';
 
@@ -23,23 +26,24 @@ import 'src/controllers/controllers.dart';
 import 'src/models.dart';
 import 'src/border/quantum_border_controller.dart';
 import 'src/border/quantum_border_tracker.dart';
+import 'src/widgets/quantum_choreography.dart';
+// **[NEW]** Importing the new modular position tracker.
+import 'src/widgets/quantum_position_tracker.dart';
 
-/// The powerful QuantumList widget - Version 17.0 with configurable Scroll Physics.
+/// The powerful QuantumList widget - Version 19.0, now more modular and maintainable.
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
           BuildContext context, int index, T item, Animation<double> animation)
       animationBuilder;
 
-  // The border system controller
   final QuantumBorderController? borderController;
-
+  final QuantumChoreography? choreography;
   final QuantumListType type;
   final bool isSliver;
   final SliverGridDelegate? gridDelegate;
   final Axis scrollDirection;
   final Duration animationDuration;
-  // **[NEW]** Allows customizing the scroll physics (e.g., Bouncing, Clamping).
   final ScrollPhysics? physics;
   final bool reverse;
   final EdgeInsetsGeometry? padding;
@@ -49,12 +53,13 @@ class QuantumList<T> extends StatefulWidget {
     required this.controller,
     required this.animationBuilder,
     this.borderController,
+    this.choreography,
     this.type = QuantumListType.list,
     this.isSliver = false,
     this.gridDelegate,
     this.scrollDirection = Axis.vertical,
     this.animationDuration = const Duration(milliseconds: 400),
-    this.physics, // Added to constructor
+    this.physics,
     this.reverse = false,
     this.padding,
   }) : super(key: key);
@@ -203,7 +208,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           controller: _scrollController,
           initialItemCount: itemCount,
           padding: widget.padding,
-          // **[NEW]** Pass the physics property to the underlying list.
           physics: widget.physics,
           reverse: widget.reverse,
           scrollDirection: widget.scrollDirection,
@@ -216,7 +220,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           controller: _scrollController,
           initialItemCount: itemCount,
           padding: widget.padding,
-          // **[NEW]** Pass the physics property to the underlying grid.
           physics: widget.physics,
           reverse: widget.reverse,
           scrollDirection: widget.scrollDirection,
@@ -247,8 +250,18 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           .where((updatedIndex) => updatedIndex == index),
       builder: (context, snapshot) {
         final currentItem = isRemoving ? item : widget.controller[index];
+
+        Animation<double> itemAnimation = animation;
+        if (widget.choreography != null && !isRemoving) {
+          itemAnimation = widget.choreography!.getAnimation(
+            parent: animation,
+            index: index,
+            totalDuration: widget.animationDuration,
+          );
+        }
+
         Widget child =
-            widget.animationBuilder(context, index, currentItem, animation);
+            widget.animationBuilder(context, index, currentItem, itemAnimation);
 
         if (widget.borderController != null && currentItem is QuantumEntity) {
           child = QuantumBorderTracker(
@@ -258,6 +271,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           );
         }
 
+        // **[MODIFIED]** Now uses the imported, modular widget.
         return QuantumPositionTracker(
           index: index,
           controller: widget.controller,
@@ -268,45 +282,5 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   }
 }
 
-class QuantumPositionTracker extends StatefulWidget {
-  final Widget child;
-  final int index;
-  final QuantumListController controller;
-
-  const QuantumPositionTracker({
-    Key? key,
-    required this.child,
-    required this.index,
-    required this.controller,
-  }) : super(key: key);
-
-  @override
-  State<QuantumPositionTracker> createState() => _QuantumPositionTrackerState();
-}
-
-class _QuantumPositionTrackerState extends State<QuantumPositionTracker> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(_measure);
-  }
-
-  @override
-  void didUpdateWidget(covariant QuantumPositionTracker oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance.addPostFrameCallback(_measure);
-  }
-
-  void _measure(_) {
-    if (!mounted) return;
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox != null && renderBox.hasSize) {
-      widget.controller.registerItemHeight(widget.index, renderBox.size.height);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.child;
-  }
-}
+// **[REMOVED]** The QuantumPositionTracker and its state have been moved to their own file.
+// این ویجت کمکی به فایل خودش منتقل شد تا کد تمیزتر باشد.

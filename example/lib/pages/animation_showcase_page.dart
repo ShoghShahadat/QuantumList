@@ -19,8 +19,9 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
 
   // State for the control panel
   QuantumAnimationType _selectedAnimation = QuantumAnimationType.scaleIn;
-  // **[NEW]** State for the selected scroll physics.
   PhysicsType _selectedPhysics = PhysicsType.Bouncing;
+  // **[NEW]** State for the selected choreography.
+  ChoreographyType _selectedChoreography = ChoreographyType.simultaneous;
   double _slideOffset = 50.0;
   bool _isReversed = false;
 
@@ -31,14 +32,19 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
   }
 
   void _addWidgets(int count) {
-    for (int i = 0; i < count; i++) {
-      _widgetCounter++;
-      final id = 'widget_$_widgetCounter';
-      final color =
-          Colors.primaries[_random.nextInt(Colors.primaries.length)].shade800;
-      _listController.add(
-          QuantumEntity(id: id, widget: SampleWidget(id: id, color: color)));
-    }
+    _listController.clear();
+    _widgetCounter = 0;
+    // Use a post-frame callback to ensure the list is cleared before adding new items.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (int i = 0; i < count; i++) {
+        _widgetCounter++;
+        final id = 'widget_$_widgetCounter';
+        final color =
+            Colors.primaries[_random.nextInt(Colors.primaries.length)].shade800;
+        _listController.add(
+            QuantumEntity(id: id, widget: SampleWidget(id: id, color: color)));
+      }
+    });
   }
 
   void _removeWidget() {
@@ -55,7 +61,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
     _listController.clear();
   }
 
-  // **[NEW]** Helper function to convert our custom enum to a Flutter ScrollPhysics object.
   ScrollPhysics _getScrollPhysics() {
     switch (_selectedPhysics) {
       case PhysicsType.Bouncing:
@@ -66,6 +71,19 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
             parent: AlwaysScrollableScrollPhysics());
       case PhysicsType.NeverScrollable:
         return const NeverScrollableScrollPhysics();
+    }
+  }
+
+  // **[NEW]** Helper to get the choreography object from the selected enum.
+  QuantumChoreography _getChoreography() {
+    switch (_selectedChoreography) {
+      case ChoreographyType.staggered:
+        return QuantumChoreography.staggered();
+      case ChoreographyType.wave:
+        return QuantumChoreography.wave();
+      case ChoreographyType.simultaneous:
+      default:
+        return const QuantumChoreography();
     }
   }
 
@@ -82,8 +100,11 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         controller: _listController,
         padding: const EdgeInsets.all(12),
         reverse: _isReversed,
-        // **[NEW]** The selected physics is now passed to the list.
         physics: _getScrollPhysics(),
+        // **[NEW]** The choreography director is now passed to the list.
+        choreography: _getChoreography(),
+        // We set a longer duration to better see the choreography effects.
+        animationDuration: const Duration(milliseconds: 1200),
         animationBuilder: (context, index, entity, animation) {
           switch (_selectedAnimation) {
             case QuantumAnimationType.fadeIn:
@@ -117,8 +138,18 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         selectedAnimation: _selectedAnimation,
         slideOffset: _slideOffset,
         isReversed: _isReversed,
-        // **[NEW]** Pass the current physics state and the callback to the panel.
         selectedPhysics: _selectedPhysics,
+        // **[NEW]** Pass choreography state to the control panel.
+        selectedChoreography: _selectedChoreography,
+        onChoreographyChanged: (type) {
+          if (type != null) {
+            setState(() {
+              _selectedChoreography = type;
+              // Re-add widgets to showcase the new choreography from the start.
+              _addWidgets(10);
+            });
+          }
+        },
         onPhysicsChanged: (type) {
           if (type != null) {
             setState(() => _selectedPhysics = type);
@@ -131,7 +162,7 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         },
         onSlideOffsetChanged: (value) => setState(() => _slideOffset = value),
         onReversedChanged: (value) => setState(() => _isReversed = value),
-        onAdd: () => _addWidgets(1),
+        onAdd: () => _addWidgets(10),
         onRemove: _removeWidget,
         onClear: _clearList,
       ),
