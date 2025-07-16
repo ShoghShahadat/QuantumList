@@ -6,7 +6,13 @@ export 'src/quantum_list_controller.dart';
 export 'src/controllers/filterable_quantum_list_controller.dart';
 export 'src/controllers/scrollable_quantum_list_controller.dart';
 export 'src/controllers/notifying_quantum_list_controller.dart';
+export 'src/controllers/quantum_widget_controller.dart'; // <-- [جدید] معرفی کنترلر انقلابی به جهان
 export 'src/enums.dart';
+export 'src/models.dart'
+    show
+        QuantumEntity,
+        RemovedItem,
+        MovedItem; // <-- [اصلاح شده] موجودیت کوانتومی نیز اکسپورت می‌شود
 export 'src/widgets/animated_border_card.dart';
 export 'src/widgets/quantum_animations.dart';
 export 'src/widgets/quantum_atom.dart';

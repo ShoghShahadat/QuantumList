@@ -6,54 +6,111 @@ void main() {
   runApp(const QuantumExampleApp());
 }
 
+// --- ساختار اصلی برنامه ---
 class QuantumExampleApp extends StatelessWidget {
   const QuantumExampleApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList Example V7.0.1',
+      title: 'QuantumList Example V8.0.0 - The Revolution',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.purple.shade300, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.purple.shade300,
             foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
       ),
-      home: const QuantumHomePage(),
+      home: const QuantumSelectorPage(),
     );
   }
 }
+
+class QuantumSelectorPage extends StatefulWidget {
+  const QuantumSelectorPage({Key? key}) : super(key: key);
+
+  @override
+  State<QuantumSelectorPage> createState() => _QuantumSelectorPageState();
+}
+
+class _QuantumSelectorPageState extends State<QuantumSelectorPage> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _pages = <Widget>[
+    DataModelDemoPage(),
+    WidgetEntityDemoPage(), // <-- صفحه جدید و انقلابی
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.data_object),
+            label: 'دموی مدل-داده',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.widgets),
+            label: 'دموی ویجت-شناسه',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.purple.shade300,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
+
+// --- دموی اول: قابلیت‌های قبلی (بدون تغییر) ---
 
 class SampleItem {
   final int id;
   String title;
   int counter;
   double height;
-
   SampleItem(
       {required this.id,
       required this.title,
       this.counter = 0,
       required this.height});
-
   int get numericId => id;
 }
 
-class QuantumHomePage extends StatefulWidget {
-  const QuantumHomePage({Key? key}) : super(key: key);
-
+class DataModelDemoPage extends StatefulWidget {
+  const DataModelDemoPage({Key? key}) : super(key: key);
   @override
-  State<QuantumHomePage> createState() => _QuantumHomePageState();
+  State<DataModelDemoPage> createState() => _DataModelDemoPageState();
 }
 
-class _QuantumHomePageState extends State<QuantumHomePage> {
+class _DataModelDemoPageState extends State<DataModelDemoPage> {
   late final FilterableQuantumListController<SampleItem> _controller;
   QuantumListType _listType = QuantumListType.list;
   int _nextItemId = 1001;
@@ -93,20 +150,17 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuantumList V7.0.1 - رفع خطا'),
+        title: const Text('دموی مدل-داده (قدیمی)'),
         actions: [
           _buildAnimationSelector(),
           IconButton(
             icon: Icon(_listType == QuantumListType.list
                 ? Icons.grid_view
                 : Icons.view_list),
-            onPressed: () {
-              setState(() {
-                _listType = _listType == QuantumListType.list
+            onPressed: () => setState(() => _listType =
+                _listType == QuantumListType.list
                     ? QuantumListType.grid
-                    : QuantumListType.list;
-              });
-            },
+                    : QuantumListType.list),
           ),
         ],
       ),
@@ -117,105 +171,56 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
 
   Widget _buildAnimationSelector() {
     return PopupMenuButton<QuantumAnimationType>(
-      icon: const Icon(Icons.animation),
-      onSelected: (QuantumAnimationType result) {
-        setState(() {
-          _animationType = result;
-        });
-      },
-      itemBuilder: (BuildContext context) =>
-          <PopupMenuEntry<QuantumAnimationType>>[
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.scaleIn,
-          child: Text('بزرگ شدن'),
-        ),
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.fadeIn,
-          child: Text('محو شدن'),
-        ),
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.slideInFromBottom,
-          child: Text('اسلاید از پایین'),
-        ),
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.slideInFromLeft,
-          child: Text('اسلاید از چپ'),
-        ),
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.slideInFromRight,
-          child: Text('اسلاید از راست'),
-        ),
-        const PopupMenuItem<QuantumAnimationType>(
-          value: QuantumAnimationType.flipInY,
-          child: Text('چرخش سه‌بعدی'),
-        ),
-      ],
-    );
+        icon: const Icon(Icons.animation),
+        onSelected: (result) => setState(() => _animationType = result),
+        itemBuilder: (context) => QuantumAnimationType.values
+            .map((e) => PopupMenuItem(value: e, child: Text(e.name)))
+            .toList());
   }
 
-  // **[FIXED]** Converted to a method to follow best practices.
   Widget _buildItem(BuildContext context, int index, SampleItem item,
       Animation<double> animation) {
+    final card = _buildCard(index, item);
     switch (_animationType) {
       case QuantumAnimationType.fadeIn:
-        return QuantumAnimations.fadeIn(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.fadeIn(context, card, animation);
       case QuantumAnimationType.slideInFromBottom:
-        return QuantumAnimations.slideInFromBottom(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.slideInFromBottom(context, card, animation);
       case QuantumAnimationType.slideInFromLeft:
-        return QuantumAnimations.slideInFromLeft(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.slideInFromLeft(context, card, animation);
       case QuantumAnimationType.slideInFromRight:
-        return QuantumAnimations.slideInFromRight(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.slideInFromRight(context, card, animation);
       case QuantumAnimationType.flipInY:
-        return QuantumAnimations.flipInY(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.flipInY(context, card, animation);
       case QuantumAnimationType.scaleIn:
       default:
-        return QuantumAnimations.scaleIn(
-            context, _buildCard(index, item), animation);
+        return QuantumAnimations.scaleIn(context, card, animation);
     }
   }
 
   Widget _buildList() {
-    if (_listType == QuantumListType.list) {
-      return QuantumList<SampleItem>(
-        // **[FIXED]** Used string interpolation for the key.
-        key: ValueKey('${_animationType}_list'),
-        controller: _controller,
-        type: QuantumListType.list,
-        padding: const EdgeInsets.all(8),
-        animationBuilder: _buildItem,
-      );
-    } else {
-      return QuantumList<SampleItem>(
-        // **[FIXED]** Used string interpolation for the key.
-        key: ValueKey('${_animationType}_grid'),
-        controller: _controller,
-        type: QuantumListType.grid,
-        padding: const EdgeInsets.all(8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: 1.0,
-        ),
-        animationBuilder: _buildItem,
-      );
-    }
+    return QuantumList<SampleItem>(
+      key: ValueKey('${_animationType}_${_listType}'),
+      controller: _controller,
+      type: _listType,
+      padding: const EdgeInsets.all(8),
+      gridDelegate: _listType == QuantumListType.grid
+          ? const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.0)
+          : null,
+      animationBuilder: _buildItem,
+    );
   }
 
   Widget _buildCard(int index, SampleItem item) {
     return AnimatedBorderCard(
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: () {
-          _controller.updateProperty(index, (itemToUpdate) {
-            itemToUpdate.counter++;
-          });
-        },
+        onTap: () => _controller.updateProperty(
+            index, (itemToUpdate) => itemToUpdate.counter++),
         child: Container(
           height: item.height,
           padding: const EdgeInsets.all(12.0),
@@ -256,34 +261,166 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
               },
               child: const Text('افزودن')),
           ElevatedButton(
-              onPressed: () {
-                _controller.sort((a, b) => a.numericId.compareTo(b.numericId));
-              },
+              onPressed: () => _controller
+                  .sort((a, b) => a.numericId.compareTo(b.numericId)),
               child: const Text('مرتب‌سازی')),
           ElevatedButton(
-              onPressed: () {
-                _controller.scrollToItem(
-                  test: (item) => item.numericId == 999,
-                );
-              },
+              onPressed: () => _controller.scrollToItem(
+                  test: (item) => item.numericId == 999),
               child: const Text('برو به آیتم ۹۹۹')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.scrollToItem(
-                  test: (item) => item.numericId == 500,
-                  animation: QuantumScrollAnimation.bouncy,
-                  duration: const Duration(milliseconds: 2000),
-                );
-              },
-              child: const Text('برو به ۵۰۰ (فنری)')),
-          ElevatedButton(
-              onPressed: () {
-                _controller.scrollToItem(
-                  test: (item) => item.numericId == 2,
-                );
-              },
-              child: const Text('برو به ۲')),
         ],
+      ),
+    );
+  }
+}
+
+// --- دموی دوم: ویجت-شناسه (انقلاب جدید) ---
+
+class WidgetEntityDemoPage extends StatefulWidget {
+  const WidgetEntityDemoPage({Key? key}) : super(key: key);
+  @override
+  State<WidgetEntityDemoPage> createState() => _WidgetEntityDemoPageState();
+}
+
+class _WidgetEntityDemoPageState extends State<WidgetEntityDemoPage> {
+  final QuantumWidgetController _controller = QuantumWidgetController();
+  final TextEditingController _idController = TextEditingController();
+  final Random _random = Random();
+  int _widgetCounter = 0;
+
+  // یک ویجت سفارشی برای نمایش
+  Widget _buildSampleWidget(String id, Color color) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Center(
+        child: Text(
+          'ویجت سفارشی\nID: $id',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+      ),
+    );
+  }
+
+  void _addWidget() {
+    _widgetCounter++;
+    final id = 'widget_$_widgetCounter';
+    final color = Colors.primaries[_random.nextInt(Colors.primaries.length)];
+    _controller
+        .add(QuantumEntity(id: id, widget: _buildSampleWidget(id, color)));
+  }
+
+  void _removeWidget() {
+    if (_idController.text.isNotEmpty) {
+      _controller.remove(_idController.text);
+      _idController.clear();
+    }
+  }
+
+  void _updateWidget() {
+    if (_idController.text.isNotEmpty) {
+      final id = _idController.text;
+      final color = Colors.accents[_random.nextInt(Colors.accents.length)];
+      _controller.update(id, _buildSampleWidget(id, color));
+      _idController.clear();
+    }
+  }
+
+  void _scrollToWidget() {
+    if (_idController.text.isNotEmpty) {
+      _controller.scrollTo(_idController.text);
+      _idController.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _idController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('دموی ویجت-شناسه (انقلابی)'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: QuantumList<QuantumEntity>(
+              controller: _controller,
+              padding: const EdgeInsets.all(8),
+              animationBuilder: (context, index, entity, animation) {
+                // به سادگی ویجت را از موجودیت گرفته و با انیمیشن نمایش می‌دهیم
+                return QuantumAnimations.scaleIn(
+                    context, entity.widget, animation);
+              },
+            ),
+          ),
+          _buildControlPanel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlPanel() {
+    return Material(
+      elevation: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _idController,
+              decoration: const InputDecoration(
+                labelText: 'شناسه ویجت (مثلا: widget_1)',
+                hintText: 'برای حذف/آپدیت/اسکرول وارد کنید',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  onPressed: _addWidget,
+                  label: const Text('افزودن ویجت'),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _removeWidget,
+                  label: const Text('حذف'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade400),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.update),
+                  onPressed: _updateWidget,
+                  label: const Text('آپدیت'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade400),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.arrow_downward),
+                  onPressed: _scrollToWidget,
+                  label: const Text('اسکرول'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade400),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
