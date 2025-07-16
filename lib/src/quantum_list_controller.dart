@@ -7,7 +7,6 @@ class QuantumListController<T> {
   @protected
   final List<T> items;
 
-  /// **[اصلاح شده]** حافظه پنهان برای نگهداری ارتفاع آیتم‌ها.
   @protected
   final Map<int, double> heightCache = {};
 
@@ -34,18 +33,19 @@ class QuantumListController<T> {
 
   QuantumListController(List<T> initialItems) : items = List.from(initialItems);
 
-  /// متدی برای ثبت یا به‌روزرسانی ارتفاع یک آیتم در حافظه.
   void registerItemHeight(int index, double height) {
     if (heightCache[index] != height) {
       heightCache[index] = height;
     }
   }
 
-  /// **[جدید]** میانگین ارتفاع آیتم‌های موجود در حافظه را محاسبه می‌کند.
-  /// **[New]** Calculates the average height of items currently in the cache.
+  /// **[جدید]** یک متد عمومی و امن برای دسترسی به حافظه پنهان.
+  /// **[New]** A public and safe method to access the height cache.
+  double? getCachedHeight(int index) => heightCache[index];
+
   double getAverageItemHeight() {
     if (heightCache.isEmpty) {
-      return 100.0; // A reasonable fallback if we know nothing.
+      return 100.0;
     }
     double totalHeight = 0;
     heightCache.forEach((key, value) {
@@ -82,7 +82,6 @@ class QuantumListController<T> {
       final T item = items.removeAt(oldIndex);
       items.insert(newIndex, item);
 
-      // Invalidate cache for moved items
       final oldHeight = heightCache.remove(oldIndex);
       if (oldHeight != null) {
         heightCache[newIndex] = oldHeight;

@@ -17,7 +17,7 @@ import 'src/controllers/scrollable_quantum_list_controller.dart';
 import 'src/enums.dart';
 import 'src/models.dart';
 
-/// The powerful QuantumList widget - Version 6.0.0 with Off-Screen Pre-rendering Engine
+/// The powerful QuantumList widget - Version 8.0.0 with Quantum Jump & Smooth Landing
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -31,6 +31,7 @@ class QuantumList<T> extends StatefulWidget {
   final ScrollPhysics? physics;
   final bool reverse;
   final EdgeInsetsGeometry? padding;
+  final int offScreenPreRenderBatchSize;
 
   const QuantumList({
     Key? key,
@@ -43,6 +44,7 @@ class QuantumList<T> extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 400),
     this.physics,
     this.reverse = false,
+    this.offScreenPreRenderBatchSize = 50,
     this.padding,
   }) : super(key: key);
 
@@ -103,51 +105,74 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _subscribeToEvents();
   }
 
-  /// **[نهایی]** پیاده‌سازی معماری "پیش-رندر فرا-صفحه‌ای"
-  /// **[Final]** Implements the "Off-screen Pre-rendering" architecture.
+  /// **[نهایی]** پیاده‌سازی معماری "پرش کوانتومی و فرود نرم"
+  /// **[Final]** Implements the "Quantum Jump & Smooth Landing" architecture.
   Future<void> _ensureVisible(int index,
       {required Duration duration,
       required Curve curve,
       double? alignment}) async {
     if (!mounted) return;
 
-    // Check if the path is already known.
+    // Phase 1: Pre-render path if necessary
     bool isPathKnown = true;
     for (int i = 0; i < index; i++) {
-      if (widget.controller.heightCache[i] == null) {
+      if (widget.controller.getCachedHeight(i) == null) {
         isPathKnown = false;
         break;
       }
     }
 
-    // If the path is not fully known, we must measure it off-screen.
     if (!isPathKnown) {
       await _measurePathTo(index);
     }
 
-    // Now that the path is guaranteed to be known, perform the final scroll.
-    await _performPreciseScroll(index, duration, curve, alignment);
+    if (!mounted) return;
+
+    // Phase 2: Perform the Quantum Jump & Smooth Landing
+    await _performHybridScroll(index, duration, curve, alignment);
   }
 
   /// Measures all unknown item heights up to the target index off-screen.
   Future<void> _measurePathTo(int targetIndex) async {
-    final unknownItems = <int, GlobalKey>{};
-    for (int i = 0; i < targetIndex; i++) {
-      if (widget.controller.heightCache[i] == null) {
-        unknownItems[i] = GlobalKey();
-      }
-    }
+    while (true) {
+      if (!mounted) return;
 
-    if (unknownItems.isEmpty) return;
+      bool isPathKnown = true;
+      List<int> unknownIndices = [];
+      for (int i = 0; i < targetIndex; i++) {
+        if (widget.controller.getCachedHeight(i) == null) {
+          isPathKnown = false;
+          unknownIndices.add(i);
+        }
+      }
+
+      if (isPathKnown) {
+        break; // Mission accomplished
+      }
+
+      final batch =
+          unknownIndices.take(widget.offScreenPreRenderBatchSize).toList();
+      await _measureBatchOffScreen(batch);
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+  }
+
+  /// Measures a specific batch of unknown item heights off-screen.
+  Future<void> _measureBatchOffScreen(List<int> indicesToMeasure) async {
+    if (indicesToMeasure.isEmpty || !mounted) return;
+
+    final itemsToMeasure = <int, GlobalKey>{};
+    for (final index in indicesToMeasure) {
+      itemsToMeasure[index] = GlobalKey();
+    }
 
     final completer = Completer<void>();
     OverlayEntry? overlayEntry;
 
     overlayEntry = OverlayEntry(
       builder: (context) {
-        // This callback runs after the off-screen widgets have been laid out.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          unknownItems.forEach((index, key) {
+          itemsToMeasure.forEach((index, key) {
             final renderBox =
                 key.currentContext?.findRenderObject() as RenderBox?;
             if (renderBox != null && renderBox.hasSize) {
@@ -159,20 +184,17 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           if (!completer.isCompleted) completer.complete();
         });
 
-        // Build the widgets in an off-screen stack.
         return Stack(
           children: [
             Positioned(
-              left: -10000, // Position far off-screen
+              left: -10000,
               top: 0,
               child: Material(
-                // Wrap in Material to provide text styles etc.
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: unknownItems.entries.map((entry) {
+                  children: itemsToMeasure.entries.map((entry) {
                     final index = entry.key;
                     final key = entry.value;
-                    // We don't need the animation part for measurement.
                     return KeyedSubtree(
                       key: key,
                       child: widget.animationBuilder(
@@ -190,39 +212,58 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
         );
       },
     );
-
-    Overlay.of(context)?.insert(overlayEntry);
+    Overlay.of(context).insert(overlayEntry);
     return completer.future;
   }
 
-  /// Helper method to perform the final, precise scroll calculation and animation.
-  Future<void> _performPreciseScroll(
+  /// Performs the hybrid scroll: Jumps near the target, then animates the rest.
+  Future<void> _performHybridScroll(
       int index, Duration duration, Curve curve, double? alignment) async {
     if (!_scrollController.hasClients) return;
 
-    double calculatedOffset = 0;
+    // Calculate the final precise offset for the target item.
+    double finalTargetOffset = 0;
     for (int i = 0; i < index; i++) {
-      calculatedOffset += widget.controller.heightCache[i] ??
+      finalTargetOffset += widget.controller.getCachedHeight(i) ??
           widget.controller.getAverageItemHeight();
     }
 
     final alignmentValue = alignment ?? 0.0;
     final viewportDimension = _scrollController.position.viewportDimension;
-    final targetItemHeight = widget.controller.heightCache[index] ??
+    final targetItemHeight = widget.controller.getCachedHeight(index) ??
         widget.controller.getAverageItemHeight();
 
-    calculatedOffset -= (viewportDimension - targetItemHeight) * alignmentValue;
+    finalTargetOffset -=
+        (viewportDimension - targetItemHeight) * alignmentValue;
 
-    final targetOffset = calculatedOffset.clamp(
+    finalTargetOffset = finalTargetOffset.clamp(
       _scrollController.position.minScrollExtent,
       _scrollController.position.maxScrollExtent,
     );
 
+    // Calculate the jump point (e.g., 2 viewports before the final target)
+    final jumpPadding = viewportDimension * 2;
+    final direction = finalTargetOffset > _scrollController.offset ? 1.0 : -1.0;
+    double jumpTargetOffset = finalTargetOffset - (jumpPadding * direction);
+
+    jumpTargetOffset = jumpTargetOffset.clamp(
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    // Perform the instant JUMP to the staging area.
+    _scrollController.jumpTo(jumpTargetOffset);
+
+    // Wait a frame for the jump to settle and UI to update.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    // Perform the final ANIMATION for a smooth landing.
     if (duration == Duration.zero) {
-      _scrollController.jumpTo(targetOffset);
+      _scrollController.jumpTo(finalTargetOffset);
     } else {
       await _scrollController.animateTo(
-        targetOffset,
+        finalTargetOffset,
         duration: duration,
         curve: curve,
       );
@@ -290,6 +331,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           key: _listKey,
           controller: _scrollController,
           initialItemCount: itemCount,
+          padding: widget.padding,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
         );
@@ -298,6 +340,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           key: _listKey,
           controller: _scrollController,
           initialItemCount: itemCount,
+          padding: widget.padding,
           gridDelegate: widget.gridDelegate!,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),

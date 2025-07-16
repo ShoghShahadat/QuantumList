@@ -12,7 +12,7 @@ class QuantumExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList Example V4.0',
+      title: 'QuantumList Example V7.0.1',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -35,7 +35,7 @@ class SampleItem {
   final int id;
   String title;
   int counter;
-  double height; // For dynamic height example
+  double height;
 
   SampleItem(
       {required this.id,
@@ -69,7 +69,6 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           (i) => SampleItem(
               id: i + 1,
               title: 'آیتم شماره ${i + 1}',
-              // Assign a random height to each item
               height: 80.0 + random.nextDouble() * 100.0)),
       onAtEnd: () => _showSnackBar('به انتهای لیست رسیدید!'),
       onAtStart: () => _showSnackBar('به ابتدای لیست رسیدید!'),
@@ -94,7 +93,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuantumList V4.0 - معماری نهایی'),
+        title: const Text('QuantumList V7.0.1 - رفع خطا'),
         actions: [
           _buildAnimationSelector(),
           IconButton(
@@ -154,43 +153,46 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
     );
   }
 
-  Widget _buildList() {
-    final itemBuilder = (BuildContext context, int index, SampleItem item,
-        Animation<double> animation) {
-      switch (_animationType) {
-        case QuantumAnimationType.fadeIn:
-          return QuantumAnimations.fadeIn(
-              context, _buildCard(index, item), animation);
-        case QuantumAnimationType.slideInFromBottom:
-          return QuantumAnimations.slideInFromBottom(
-              context, _buildCard(index, item), animation);
-        case QuantumAnimationType.slideInFromLeft:
-          return QuantumAnimations.slideInFromLeft(
-              context, _buildCard(index, item), animation);
-        case QuantumAnimationType.slideInFromRight:
-          return QuantumAnimations.slideInFromRight(
-              context, _buildCard(index, item), animation);
-        case QuantumAnimationType.flipInY:
-          return QuantumAnimations.flipInY(
-              context, _buildCard(index, item), animation);
-        case QuantumAnimationType.scaleIn:
-        default:
-          return QuantumAnimations.scaleIn(
-              context, _buildCard(index, item), animation);
-      }
-    };
+  // **[FIXED]** Converted to a method to follow best practices.
+  Widget _buildItem(BuildContext context, int index, SampleItem item,
+      Animation<double> animation) {
+    switch (_animationType) {
+      case QuantumAnimationType.fadeIn:
+        return QuantumAnimations.fadeIn(
+            context, _buildCard(index, item), animation);
+      case QuantumAnimationType.slideInFromBottom:
+        return QuantumAnimations.slideInFromBottom(
+            context, _buildCard(index, item), animation);
+      case QuantumAnimationType.slideInFromLeft:
+        return QuantumAnimations.slideInFromLeft(
+            context, _buildCard(index, item), animation);
+      case QuantumAnimationType.slideInFromRight:
+        return QuantumAnimations.slideInFromRight(
+            context, _buildCard(index, item), animation);
+      case QuantumAnimationType.flipInY:
+        return QuantumAnimations.flipInY(
+            context, _buildCard(index, item), animation);
+      case QuantumAnimationType.scaleIn:
+      default:
+        return QuantumAnimations.scaleIn(
+            context, _buildCard(index, item), animation);
+    }
+  }
 
+  Widget _buildList() {
     if (_listType == QuantumListType.list) {
       return QuantumList<SampleItem>(
-        key: ValueKey(_animationType.toString() + '_list'),
+        // **[FIXED]** Used string interpolation for the key.
+        key: ValueKey('${_animationType}_list'),
         controller: _controller,
         type: QuantumListType.list,
         padding: const EdgeInsets.all(8),
-        animationBuilder: itemBuilder,
+        animationBuilder: _buildItem,
       );
     } else {
       return QuantumList<SampleItem>(
-        key: ValueKey(_animationType.toString() + '_grid'),
+        // **[FIXED]** Used string interpolation for the key.
+        key: ValueKey('${_animationType}_grid'),
         controller: _controller,
         type: QuantumListType.grid,
         padding: const EdgeInsets.all(8),
@@ -198,9 +200,9 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           crossAxisCount: 2,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.0, // Adjusted for grid
+          childAspectRatio: 1.0,
         ),
-        animationBuilder: itemBuilder,
+        animationBuilder: _buildItem,
       );
     }
   }
@@ -215,7 +217,7 @@ class _QuantumHomePageState extends State<QuantumHomePage> {
           });
         },
         child: Container(
-          height: item.height, // Using dynamic height from the model
+          height: item.height,
           padding: const EdgeInsets.all(12.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
