@@ -26,7 +26,7 @@ import 'src/border/quantum_border_controller.dart';
 import 'src/border/quantum_border_overlay.dart';
 import 'src/border/quantum_border_tracker.dart';
 
-/// The powerful QuantumList widget - Version 9.0.0 with Quantum Border System
+/// The powerful QuantumList widget - Version 13.0 with Border Scroll Fix.
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -44,7 +44,6 @@ class QuantumList<T> extends StatefulWidget {
   final ScrollPhysics? physics;
   final bool reverse;
   final EdgeInsetsGeometry? padding;
-  final int offScreenPreRenderBatchSize;
 
   const QuantumList({
     Key? key,
@@ -58,8 +57,8 @@ class QuantumList<T> extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 400),
     this.physics,
     this.reverse = false,
-    this.offScreenPreRenderBatchSize = 50,
     this.padding,
+    int? offScreenPreRenderBatchSize, // This is now obsolete
   }) : super(key: key);
 
   @override
@@ -119,154 +118,42 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _subscribeToEvents();
   }
 
-  /// **[FIXED]** The signature now perfectly matches the controller's callback definition.
   Future<void> _ensureVisible(int index,
       {required Duration duration,
       required Curve curve,
       required double alignment}) async {
-    if (!mounted) return;
+    if (!mounted || !_scrollController.hasClients) return;
 
-    bool isPathKnown = true;
-    for (int i = 0; i < index; i++) {
-      if (widget.controller.getCachedHeight(i) == null) {
-        isPathKnown = false;
-        break;
-      }
-    }
-
-    if (!isPathKnown) {
-      await _measurePathTo(index);
-    }
-
-    if (!mounted) return;
-
-    await _performHybridScroll(index, duration, curve, alignment);
-  }
-
-  Future<void> _measurePathTo(int targetIndex) async {
-    while (true) {
-      if (!mounted) return;
-
-      bool isPathKnown = true;
-      List<int> unknownIndices = [];
-      for (int i = 0; i < targetIndex; i++) {
-        if (widget.controller.getCachedHeight(i) == null) {
-          isPathKnown = false;
-          unknownIndices.add(i);
-        }
-      }
-
-      if (isPathKnown) {
-        break;
-      }
-
-      final batch =
-          unknownIndices.take(widget.offScreenPreRenderBatchSize).toList();
-      await _measureBatchOffScreen(batch);
-      await Future.delayed(const Duration(milliseconds: 1));
-    }
-  }
-
-  Future<void> _measureBatchOffScreen(List<int> indicesToMeasure) async {
-    if (indicesToMeasure.isEmpty || !mounted) return;
-
-    final itemsToMeasure = <int, GlobalKey>{};
-    for (final index in indicesToMeasure) {
-      itemsToMeasure[index] = GlobalKey();
-    }
-
-    final completer = Completer<void>();
-    OverlayEntry? overlayEntry;
-
-    overlayEntry = OverlayEntry(
-      builder: (context) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          itemsToMeasure.forEach((index, key) {
-            final renderBox =
-                key.currentContext?.findRenderObject() as RenderBox?;
-            if (renderBox != null && renderBox.hasSize) {
-              widget.controller
-                  .registerItemHeight(index, renderBox.size.height);
-            }
-          });
-          overlayEntry?.remove();
-          if (!completer.isCompleted) completer.complete();
-        });
-
-        return Stack(
-          children: [
-            Positioned(
-              left: -10000,
-              top: 0,
-              child: Material(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: itemsToMeasure.entries.map((entry) {
-                    final index = entry.key;
-                    final key = entry.value;
-                    return KeyedSubtree(
-                      key: key,
-                      child: widget.animationBuilder(
-                        context,
-                        index,
-                        widget.controller[index],
-                        const AlwaysStoppedAnimation(1.0),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-    Overlay.of(context).insert(overlayEntry);
-    return completer.future;
-  }
-
-  /// **[FIXED]** The `alignment` parameter is no longer nullable.
-  Future<void> _performHybridScroll(
-      int index, Duration duration, Curve curve, double alignment) async {
-    if (!_scrollController.hasClients) return;
-
-    double finalTargetOffset = 0;
-    for (int i = 0; i < index; i++) {
-      finalTargetOffset += widget.controller.getCachedHeight(i) ??
-          widget.controller.getAverageItemHeight();
-    }
-
-    final viewportDimension = _scrollController.position.viewportDimension;
-    final targetItemHeight = widget.controller.getCachedHeight(index) ??
-        widget.controller.getAverageItemHeight();
-
-    // The null check is removed as `alignment` is now guaranteed to be a double.
-    finalTargetOffset -= (viewportDimension - targetItemHeight) * alignment;
-
-    finalTargetOffset = finalTargetOffset.clamp(
-      _scrollController.position.minScrollExtent,
-      _scrollController.position.maxScrollExtent,
-    );
-
-    final jumpPadding = viewportDimension * 2;
-    final direction = finalTargetOffset > _scrollController.offset ? 1.0 : -1.0;
-    double jumpTargetOffset = finalTargetOffset - (jumpPadding * direction);
-
-    jumpTargetOffset = jumpTargetOffset.clamp(
-      _scrollController.position.minScrollExtent,
-      _scrollController.position.maxScrollExtent,
-    );
-
-    _scrollController.jumpTo(jumpTargetOffset);
+    final averageHeight = widget.controller.getAverageItemHeight();
+    double estimatedOffset = index * averageHeight;
+    _scrollController.jumpTo(estimatedOffset.clamp(
+        _scrollController.position.minScrollExtent,
+        _scrollController.position.maxScrollExtent));
 
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
 
+    double preciseOffset = 0;
+    for (int i = 0; i < index; i++) {
+      preciseOffset += widget.controller.getCachedHeight(i) ?? averageHeight;
+    }
+
+    final viewportDimension = _scrollController.position.viewportDimension;
+    final targetItemHeight =
+        widget.controller.getCachedHeight(index) ?? averageHeight;
+
+    preciseOffset -= (viewportDimension - targetItemHeight) * alignment;
+
+    preciseOffset = preciseOffset.clamp(
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
+    );
+
     if (duration == Duration.zero) {
-      _scrollController.jumpTo(finalTargetOffset);
+      _scrollController.jumpTo(preciseOffset);
     } else {
       await _scrollController.animateTo(
-        finalTargetOffset,
+        preciseOffset,
         duration: duration,
         curve: curve,
       );
@@ -324,8 +211,10 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     }
 
     if (widget.borderController != null) {
+      // **[FIXED]** Pass the scroll controller to the overlay system.
       return QuantumBorderOverlay(
         controller: widget.borderController!,
+        scrollController: _scrollController,
         child: listWidget,
       );
     }
@@ -379,6 +268,8 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           child = QuantumBorderTracker(
             borderController: widget.borderController!,
             entity: item,
+            // **[FIXED]** Provide the scroll controller to the tracker.
+            scrollListenable: _scrollController,
             child: child,
           );
         }

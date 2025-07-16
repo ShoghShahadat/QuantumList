@@ -2,19 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:quantum_list/src/border/quantum_border_controller.dart';
 import 'package:quantum_list/src/models.dart';
 
-/// یک ویجت ردیاب که به دور هر آیتم در لیست قرار می‌گیرد.
-/// وظیفه آن پیدا کردن موقعیت و اندازه دقیق خود در صفحه و گزارش آن
-/// به QuantumBorderController است.
+/// A tracker widget that wraps each item in the list.
+/// It finds its precise position and size on the screen and reports it
+/// to the QuantumBorderController.
 class QuantumBorderTracker extends StatefulWidget {
   final Widget child;
   final QuantumBorderController borderController;
-  final QuantumEntity entity; // ویجت باید از نوع QuantumEntity باشد
+  final QuantumEntity entity;
+  // **[NEW]** Receives a listenable (the scroll controller) to know when to update its position.
+  final Listenable scrollListenable;
 
   const QuantumBorderTracker({
     Key? key,
     required this.child,
     required this.borderController,
     required this.entity,
+    required this.scrollListenable,
   }) : super(key: key);
 
   @override
@@ -27,35 +30,44 @@ class _QuantumBorderTrackerState extends State<QuantumBorderTracker> {
   @override
   void initState() {
     super.initState();
-    // پس از اولین رندر، موقعیت را ثبت کن
+    // Report position after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportPosition());
+    // **[FIXED]** Listen for scroll events to report position changes.
+    widget.scrollListenable.addListener(_reportPosition);
   }
 
   @override
   void didUpdateWidget(covariant QuantumBorderTracker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // با هر به‌روزرسانی ویجت، موقعیت را دوباره گزارش کن
+    // If the scroll controller instance changes, update the listener.
+    if (oldWidget.scrollListenable != widget.scrollListenable) {
+      oldWidget.scrollListenable.removeListener(_reportPosition);
+      widget.scrollListenable.addListener(_reportPosition);
+    }
+    // Report position on widget update as well.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportPosition());
   }
 
   @override
   void dispose() {
-    // هنگام حذف ویجت از لیست، آن را از سیستم بوردر نیز حذف کن
+    // Clean up the listener and unregister the widget from the border system.
+    widget.scrollListenable.removeListener(_reportPosition);
     widget.borderController.unregisterWidget(widget.entity.id);
     super.dispose();
   }
 
+  /// Reports the current global position and size of this widget to the controller.
   void _reportPosition() {
     if (!mounted) return;
     final context = _widgetKey.currentContext;
     final renderBox = context?.findRenderObject() as RenderBox?;
 
     if (context != null && renderBox != null && renderBox.hasSize) {
-      // پیدا کردن موقعیت ویجت نسبت به کل صفحه
+      // Find the widget's position relative to the entire screen.
       final position = renderBox.localToGlobal(Offset.zero);
       final size = renderBox.size;
 
-      // ساخت یک گزارش کامل و ارسال آن به کنترلر
+      // Create a complete report and send it to the controller.
       final info = QuantumWidgetInfo(
         entityId: widget.entity.id,
         position: position,
@@ -67,7 +79,7 @@ class _QuantumBorderTrackerState extends State<QuantumBorderTracker> {
 
   @override
   Widget build(BuildContext context) {
-    // از یک کلید برای پیدا کردن RenderBox استفاده می‌کنیم
+    // Use a KeyedSubtree to reliably find the RenderBox.
     return KeyedSubtree(
       key: _widgetKey,
       child: widget.child,

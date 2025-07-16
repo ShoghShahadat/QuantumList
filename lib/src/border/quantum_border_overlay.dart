@@ -3,15 +3,18 @@ import 'quantum_border.dart';
 import 'quantum_border_controller.dart';
 import 'quantum_border_painter.dart';
 
-/// ویجت اصلی برای نمایش بوردرها بر روی لیست.
+/// The main widget for displaying borders over the list.
 class QuantumBorderOverlay extends StatefulWidget {
   final Widget child;
   final QuantumBorderController controller;
+  // **[NEW]** Receives the scroll controller to know when the list is moving.
+  final ScrollController scrollController;
 
   const QuantumBorderOverlay({
     Key? key,
     required this.child,
     required this.controller,
+    required this.scrollController,
   }) : super(key: key);
 
   @override
@@ -39,19 +42,21 @@ class _QuantumBorderOverlayState extends State<QuantumBorderOverlay>
 
   @override
   Widget build(BuildContext context) {
+    // **[FIXED]** The overlay now rebuilds on every scroll event thanks to this AnimatedBuilder.
+    // This ensures the `listOffset` is always up-to-date.
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: widget.scrollController,
       builder: (context, child) {
         return StreamBuilder<List<ActiveBorderInfo>>(
           stream: widget.controller.activeBordersStream,
           initialData: const [],
           builder: (context, snapshot) {
             final activeBorders = snapshot.data ?? [];
+            // This now correctly finds the RenderObject of the QuantumList itself.
             final listRenderBox = context.findRenderObject() as RenderBox?;
             final listOffset =
                 listRenderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
 
-            // مدت زمان انیمیشن را یک بار در هر بیلد بررسی و بروزرسانی می‌کنیم
             final newDuration = widget.controller.getAnimationDuration();
             if (_animationController.duration != newDuration) {
               _animationController.duration = newDuration;
@@ -62,11 +67,13 @@ class _QuantumBorderOverlayState extends State<QuantumBorderOverlay>
 
             return Stack(
               children: [
-                // لایه اول: خود لیست
+                // The list itself
                 widget.child,
 
-                // لایه‌های بعدی: هر بوردر فعال
+                // The borders, now correctly positioned
                 ...activeBorders.map((borderInfo) {
+                  // The calculation is the same, but now both `listOffset` and
+                  // `borderInfo.targetInfo.position` are updated on every scroll frame.
                   final position = borderInfo.targetInfo.position - listOffset;
 
                   return AnimatedPositioned(
