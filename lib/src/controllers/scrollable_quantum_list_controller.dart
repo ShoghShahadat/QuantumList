@@ -12,7 +12,7 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
   Future<void> Function(int index,
       {required Duration duration,
       required Curve curve,
-      double alignment})? _ensureVisibleCallback;
+      required double alignment})? _ensureVisibleCallback;
 
   ScrollableQuantumListController(super.initialItems);
 
@@ -24,24 +24,47 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
       Future<void> Function(int index,
               {required Duration duration,
               required Curve curve,
-              double alignment})
+              required double alignment})
           callback) {
     _ensureVisibleCallback = callback;
   }
 
-  /// **[نهایی]** با استفاده از موتور کاوش و محاسبه، به سمت آیتم مورد نظر حرکت می‌کند.
-  /// **[Final]** Scrolls to an item using the new Explore & Calculate engine.
+  /// Scrolls to an item that matches the provided test condition.
   Future<void> scrollToItem({
     required bool Function(T item) test,
     Duration duration = const Duration(milliseconds: 800),
     QuantumScrollAnimation animation = QuantumScrollAnimation.smooth,
     double alignment = 0.0,
   }) async {
-    if (scrollController == null || !scrollController!.hasClients) return;
-
     final int index = items.indexWhere(test);
     if (index == -1) {
       debugPrint("QuantumList: Item to scroll to was not found.");
+      return;
+    }
+    await scrollToIndex(
+      index,
+      duration: duration,
+      animation: animation,
+      alignment: alignment,
+    );
+  }
+
+  /// **[NEW]** Scrolls directly to a specific index in the list.
+  /// This is the core of the "Quantum Jump" feature.
+  Future<void> scrollToIndex(
+    int index, {
+    Duration duration = const Duration(milliseconds: 800),
+    QuantumScrollAnimation animation = QuantumScrollAnimation.smooth,
+    double alignment = 0.0,
+  }) async {
+    if (scrollController == null || !scrollController!.hasClients) {
+      debugPrint(
+          "QuantumList: Scroll controller not attached or has no clients.");
+      return;
+    }
+    if (index < 0 || index >= length) {
+      debugPrint(
+          "QuantumList: Scroll index $index is out of bounds (0-$length).");
       return;
     }
 

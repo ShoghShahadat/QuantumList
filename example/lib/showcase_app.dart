@@ -1,6 +1,7 @@
 import 'package:example/pages/animation_showcase_page.dart';
 import 'package:example/pages/border_showcase_page.dart';
 import 'package:example/pages/controller_showcase_page.dart';
+import 'package:example/pages/performance_showcase_page.dart';
 import 'package:flutter/material.dart';
 
 /// The main application widget that holds the tabbed navigation.
@@ -27,6 +28,7 @@ class ShowcaseApp extends StatelessWidget {
           ),
         ),
         body: const TabBarView(
+          physics: NeverScrollableScrollPhysics(), // To prevent swipe conflicts
           children: [
             // Tab 1: The fully functional Border Showcase
             BorderShowcasePage(),
@@ -34,11 +36,11 @@ class ShowcaseApp extends StatelessWidget {
             // Tab 2: The interactive Animation Showcase
             AnimationShowcasePage(),
 
-            // Tab 3: The new Controller Showcase
+            // Tab 3: The Controller Showcase
             ControllerShowcasePage(),
 
-            // Placeholder for the last tab
-            Center(child: Text('Performance Test Coming Soon!')),
+            // Tab 4: The new Performance Stress Test
+            PerformanceShowcasePage(),
           ],
         ),
       ),
