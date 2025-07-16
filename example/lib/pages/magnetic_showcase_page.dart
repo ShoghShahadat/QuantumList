@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
 
 /// صفحه‌ای برای نمایش قابلیت آیتم‌های مغناطیسی (هدرهای چسبان).
-/// A page to showcase the magnetic items (sticky headers) functionality.
 class MagneticShowcasePage extends StatefulWidget {
   const MagneticShowcasePage({Key? key}) : super(key: key);
 
@@ -14,16 +13,20 @@ class MagneticShowcasePage extends StatefulWidget {
 class _MagneticShowcasePageState extends State<MagneticShowcasePage> {
   final QuantumWidgetController _controller = QuantumWidgetController();
   final ScrollController _scrollController = ScrollController();
-  final GlobalKey _listKey = GlobalKey();
 
-  Widget? _stickyHeaderWidget;
-  double _stickyHeaderOffset = 0.0;
+  // A map to store the layout position of each magnetic header.
+  final Map<int, double> _magneticHeaderPositions = {};
+  QuantumEntity? _stickyHeaderEntity;
+  double _stickyHeaderVerticalOffset = 0.0;
+  final double _topPadding = 10.0; // Define padding as a constant
 
   @override
   void initState() {
     super.initState();
     _populateList();
     _scrollController.addListener(_scrollListener);
+    // Calculate initial positions after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _calculatePositions());
   }
 
   void _populateList() {
@@ -55,37 +58,68 @@ class _MagneticShowcasePageState extends State<MagneticShowcasePage> {
     }
   }
 
-  void _scrollListener() {
+  /// **[FIXED]** Calculates and stores the y-offset of each magnetic header,
+  /// now correctly accounting for the list's top padding.
+  void _calculatePositions() {
     if (!mounted) return;
+    _magneticHeaderPositions.clear();
+    double currentOffset = _topPadding; // Start with the list's top padding.
 
-    Widget? newStickyHeader;
-    double newOffset = 0.0;
-    double currentOffset = 0.0;
-
-    // پیدا کردن آیتم‌های مغناطیسی و موقعیت آن‌ها
     for (int i = 0; i < _controller.length; i++) {
       final entity = _controller[i];
-      final itemHeight = _controller.getCachedHeight(i) ?? 50.0;
-
       if (entity.isMagnetic) {
-        if (currentOffset <= _scrollController.offset) {
-          newStickyHeader = entity.widget;
-        }
-        // بررسی اینکه آیا هدر بعدی در حال هل دادن هدر فعلی است یا خیر
-        if (currentOffset > _scrollController.offset &&
-            currentOffset < _scrollController.offset + itemHeight) {
-          newOffset = currentOffset - _scrollController.offset - itemHeight;
+        _magneticHeaderPositions[i] = currentOffset;
+      }
+      // Use cached height for accuracy. Default to 50 for headers and 48 for ListTiles.
+      currentOffset +=
+          _controller.getCachedHeight(i) ?? (entity.isMagnetic ? 50.0 : 48.0);
+    }
+    // Trigger a manual scroll listen to update the UI on first load.
+    _scrollListener();
+  }
+
+  /// The robust scroll listener logic.
+  void _scrollListener() {
+    if (!mounted || _magneticHeaderPositions.isEmpty) return;
+
+    final scrollOffset = _scrollController.offset;
+    QuantumEntity? newStickyHeader;
+    double newVerticalOffset = 0.0;
+
+    // Find the last magnetic header that is above the current scroll position.
+    final potentialHeaders = _magneticHeaderPositions.entries.where((entry) {
+      // We subtract the padding because the scroll offset starts from 0 inside the scrollable area.
+      return entry.value - _topPadding <= scrollOffset;
+    });
+
+    if (potentialHeaders.isNotEmpty) {
+      final currentHeaderEntry = potentialHeaders.last;
+      newStickyHeader = _controller[currentHeaderEntry.key];
+
+      // Now, find the *next* magnetic header to calculate the push-off effect.
+      final nextHeaderIndex = _magneticHeaderPositions.keys
+          .firstWhere((k) => k > currentHeaderEntry.key, orElse: () => -1);
+
+      if (nextHeaderIndex != -1) {
+        final nextHeaderPosition = _magneticHeaderPositions[nextHeaderIndex]!;
+        final stickyHeaderHeight =
+            _controller.getCachedHeight(currentHeaderEntry.key) ?? 50.0;
+
+        // If the next header is about to push the current one, adjust the offset.
+        if (scrollOffset + stickyHeaderHeight >
+            nextHeaderPosition - _topPadding) {
+          newVerticalOffset = (nextHeaderPosition - _topPadding) -
+              (scrollOffset + stickyHeaderHeight);
         }
       }
-      currentOffset += itemHeight;
     }
 
-    // آپدیت کردن ویجت هدر چسبان فقط در صورت نیاز
-    if (newStickyHeader != _stickyHeaderWidget ||
-        newOffset != _stickyHeaderOffset) {
+    // Update the state only if something has changed.
+    if (newStickyHeader?.id != _stickyHeaderEntity?.id ||
+        newVerticalOffset != _stickyHeaderVerticalOffset) {
       setState(() {
-        _stickyHeaderWidget = newStickyHeader;
-        _stickyHeaderOffset = newOffset;
+        _stickyHeaderEntity = newStickyHeader;
+        _stickyHeaderVerticalOffset = newVerticalOffset;
       });
     }
   }
@@ -102,35 +136,29 @@ class _MagneticShowcasePageState extends State<MagneticShowcasePage> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // لیست اصلی
+        // The main list, now connected to our scroll controller.
         QuantumList<QuantumEntity>(
-          key: _listKey,
           controller: _controller,
-          // اتصال اسکرول کنترلر به لیست
-          physics: const AlwaysScrollableScrollPhysics(),
-          // این بخش برای اتصال اسکرول کنترلر به QuantumList است که در نسخه فعلی
-          // به صورت مستقیم پشتیبانی نمی‌شود، اما با استفاده از ScrollableQuantumListController
-          // و attachScrollController می‌توان این کار را انجام داد.
-          // در اینجا ما از یک ScrollController خارجی استفاده می‌کنیم.
-          // Note: This is a conceptual implementation. A direct way to pass
-          // the scroll controller to QuantumList would be needed for perfect sync.
-          // We are using the attached controller from the base class.
+          scrollController: _scrollController,
+          padding: EdgeInsets.only(top: _topPadding),
           animationBuilder: (context, index, entity, animation) {
-            // مخفی کردن هدر اصلی وقتی که کلون آن در بالای صفحه چسبیده است
-            if (entity.isMagnetic && entity.widget == _stickyHeaderWidget) {
-              final itemHeight = _controller.getCachedHeight(index) ?? 50.0;
-              return SizedBox(height: itemHeight);
-            }
-            return QuantumAnimations.fadeIn(context, entity.widget, animation);
+            // Use Opacity to hide the original header while preserving its space.
+            final isStuck =
+                entity.isMagnetic && entity.id == _stickyHeaderEntity?.id;
+            return Opacity(
+              opacity: isStuck ? 0.0 : 1.0,
+              child:
+                  QuantumAnimations.fadeIn(context, entity.widget, animation),
+            );
           },
         ),
-        // ویجت هدر چسبان
-        if (_stickyHeaderWidget != null)
+        // The floating sticky header widget.
+        if (_stickyHeaderEntity != null)
           Positioned(
-            top: _stickyHeaderOffset,
+            top: _stickyHeaderVerticalOffset,
             left: 0,
             right: 0,
-            child: _stickyHeaderWidget!,
+            child: _stickyHeaderEntity!.widget,
           ),
       ],
     );
