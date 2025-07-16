@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
 import 'dart:math';
 
-/// A page dedicated to showcasing the various entrance animations.
+/// A page dedicated to showcasing the various entrance animations and scroll physics.
 class AnimationShowcasePage extends StatefulWidget {
   const AnimationShowcasePage({Key? key}) : super(key: key);
 
@@ -19,6 +19,8 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
 
   // State for the control panel
   QuantumAnimationType _selectedAnimation = QuantumAnimationType.scaleIn;
+  // **[NEW]** State for the selected scroll physics.
+  PhysicsType _selectedPhysics = PhysicsType.Bouncing;
   double _slideOffset = 50.0;
   bool _isReversed = false;
 
@@ -41,7 +43,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
 
   void _removeWidget() {
     if (_listController.length > 0) {
-      // Use the new, safe getters on the controller
       final entityToRemove =
           _isReversed ? _listController.first : _listController.last;
       if (entityToRemove != null) {
@@ -51,8 +52,21 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
   }
 
   void _clearList() {
-    // Use the new, correct clear() method
     _listController.clear();
+  }
+
+  // **[NEW]** Helper function to convert our custom enum to a Flutter ScrollPhysics object.
+  ScrollPhysics _getScrollPhysics() {
+    switch (_selectedPhysics) {
+      case PhysicsType.Bouncing:
+        return const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics());
+      case PhysicsType.Clamping:
+        return const ClampingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics());
+      case PhysicsType.NeverScrollable:
+        return const NeverScrollableScrollPhysics();
+    }
   }
 
   @override
@@ -68,9 +82,9 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         controller: _listController,
         padding: const EdgeInsets.all(12),
         reverse: _isReversed,
-        // The animationBuilder is the ONLY builder needed.
+        // **[NEW]** The selected physics is now passed to the list.
+        physics: _getScrollPhysics(),
         animationBuilder: (context, index, entity, animation) {
-          // The magic happens here! We apply the selected animation.
           switch (_selectedAnimation) {
             case QuantumAnimationType.fadeIn:
               return QuantumAnimations.fadeIn(
@@ -103,6 +117,13 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         selectedAnimation: _selectedAnimation,
         slideOffset: _slideOffset,
         isReversed: _isReversed,
+        // **[NEW]** Pass the current physics state and the callback to the panel.
+        selectedPhysics: _selectedPhysics,
+        onPhysicsChanged: (type) {
+          if (type != null) {
+            setState(() => _selectedPhysics = type);
+          }
+        },
         onAnimationChanged: (type) {
           if (type != null) {
             setState(() => _selectedAnimation = type);

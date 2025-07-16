@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
 
+/// **[FIXED]** A custom enum to represent the different scroll physics options.
+/// The incompatible 'Fixed' option has been removed to prevent crashes.
+// این enum انواع مختلف فیزیک اسکرول را برای انتخاب راحت‌تر، تعریف می‌کند.
+enum PhysicsType {
+  Bouncing, // حالت فنری (مناسب iOS)
+  Clamping, // حالت چسبنده (مناسب Android)
+  NeverScrollable, // اسکرول غیرفعال
+}
+
 /// A control panel for the Animation Showcase.
 class AnimationControlPanel extends StatelessWidget {
   final QuantumAnimationType selectedAnimation;
   final double slideOffset;
   final bool isReversed;
+  final PhysicsType selectedPhysics;
+  final ValueChanged<PhysicsType?> onPhysicsChanged;
   final ValueChanged<QuantumAnimationType?> onAnimationChanged;
   final ValueChanged<double> onSlideOffsetChanged;
   final ValueChanged<bool> onReversedChanged;
@@ -24,6 +35,8 @@ class AnimationControlPanel extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
     required this.onClear,
+    required this.selectedPhysics,
+    required this.onPhysicsChanged,
   }) : super(key: key);
 
   @override
@@ -68,16 +81,33 @@ class AnimationControlPanel extends StatelessWidget {
           const Divider(height: 16),
           // Animation Type Dropdown
           ListTile(
+            dense: true,
             title: const Text('Animation Type'),
             trailing: DropdownButton<QuantumAnimationType>(
               value: selectedAnimation,
               items: QuantumAnimationType.values
                   .map((type) => DropdownMenuItem(
                       value: type,
-                      child: Text((type).name.characters.first.toUpperCase() +
-                          (type).name.substring(1))))
+                      child: Text((type).name.replaceAll('In', ' In '))))
                   .toList(),
               onChanged: onAnimationChanged,
+            ),
+          ),
+          // Dropdown for selecting scroll physics.
+          ListTile(
+            dense: true,
+            title: const Text('Scroll Physics'),
+            trailing: DropdownButton<PhysicsType>(
+              value: selectedPhysics,
+              // **[FIXED]** The list of items is now generated from the corrected enum
+              // which no longer contains the 'Fixed' option.
+              items: PhysicsType.values
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.name),
+                      ))
+                  .toList(),
+              onChanged: onPhysicsChanged,
             ),
           ),
           // Slide Offset Slider (only visible for slide animations)
@@ -87,6 +117,7 @@ class AnimationControlPanel extends StatelessWidget {
               children: [
                 const Divider(height: 1),
                 ListTile(
+                  dense: true,
                   title:
                       Text('Slide Offset: ${slideOffset.toStringAsFixed(0)}px'),
                 ),

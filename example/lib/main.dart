@@ -1,8 +1,21 @@
 import 'package:example/showcase_app.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 void main() {
   runApp(const QuantumExampleApp());
+}
+
+// **[NEW]** A custom scroll behavior that enables mouse dragging on all devices.
+// این کلاس سفارشی، قابلیت کشیدن لیست‌ها با موس را در کل برنامه فعال می‌کند.
+class MyCustomScrollBehavior extends MaterialScrollBehavior {
+  // Override behavior methods and getters like dragDevices
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        // etc.
+      };
 }
 
 /// The root widget of the showcase application.
@@ -14,6 +27,9 @@ class QuantumExampleApp extends StatelessWidget {
     return MaterialApp(
       title: 'QuantumList Showcase',
       debugShowCheckedModeBanner: false,
+      // **[NEW]** Applying the custom scroll behavior to the entire app.
+      // اعمال رفتار اسکرول سفارشی به کل برنامه.
+      scrollBehavior: MyCustomScrollBehavior(),
       theme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.purple,
@@ -47,7 +63,6 @@ class QuantumExampleApp extends StatelessWidget {
           ),
         ),
       ),
-      // The new root of the example app is the ShowcaseApp
       home: const ShowcaseApp(),
     );
   }
