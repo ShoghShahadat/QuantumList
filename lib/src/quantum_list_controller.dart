@@ -39,8 +39,7 @@ class QuantumListController<T> {
     }
   }
 
-  /// **[جدید]** یک متد عمومی و امن برای دسترسی به حافظه پنهان.
-  /// **[New]** A public and safe method to access the height cache.
+  /// A public and safe method to access the height cache.
   double? getCachedHeight(int index) => heightCache[index];
 
   double getAverageItemHeight() {
@@ -71,6 +70,13 @@ class QuantumListController<T> {
       final T removedItem = items.removeAt(index);
       _shiftCacheKeys(startingFrom: index, by: -1);
       removeNotifier.add(RemovedItem(index, removedItem));
+    }
+  }
+
+  /// [NEW] Removes all items from the list with animation.
+  void clear() {
+    for (int i = items.length - 1; i >= 0; i--) {
+      removeAt(i);
     }
   }
 
@@ -113,6 +119,16 @@ class QuantumListController<T> {
 
   T operator [](int index) => items[index];
   int get length => items.length;
+
+  /// [NEW] Safely gets the first item, or null if the list is empty.
+  T? get first {
+    return items.isNotEmpty ? items.first : null;
+  }
+
+  /// [NEW] Safely gets the last item, or null if the list is empty.
+  T? get last {
+    return items.isNotEmpty ? items.last : null;
+  }
 
   void dispose() {
     updateNotifier.close();

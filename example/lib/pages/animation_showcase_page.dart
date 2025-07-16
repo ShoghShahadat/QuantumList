@@ -41,14 +41,17 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
 
   void _removeWidget() {
     if (_listController.length > 0) {
-      final idToRemove = _isReversed
-          ? _listController.items.first.id
-          : _listController.items.last.id;
-      _listController.remove(idToRemove);
+      // Use the new, safe getters on the controller
+      final entityToRemove =
+          _isReversed ? _listController.first : _listController.last;
+      if (entityToRemove != null) {
+        _listController.remove(entityToRemove.id);
+      }
     }
   }
 
   void _clearList() {
+    // Use the new, correct clear() method
     _listController.clear();
   }
 
@@ -65,11 +68,7 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         controller: _listController,
         padding: const EdgeInsets.all(12),
         reverse: _isReversed,
-        itemBuilder: (context, index, entity) {
-          // In this showcase, we use the simpler `itemBuilder` as we don't need the animation object.
-          // The animation is handled by the `animationBuilder`.
-          return entity.widget;
-        },
+        // The animationBuilder is the ONLY builder needed.
         animationBuilder: (context, index, entity, animation) {
           // The magic happens here! We apply the selected animation.
           switch (_selectedAnimation) {
