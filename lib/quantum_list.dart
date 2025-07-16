@@ -24,7 +24,9 @@ import 'src/models.dart';
 import 'src/border/quantum_border_controller.dart';
 import 'src/border/quantum_border_tracker.dart';
 
-/// The powerful QuantumList widget - Version 16.0 with a flawless Border System.
+/// The powerful QuantumList widget - Version 16.1 with a FLAWLESS Border System.
+/// This version fixes the border rendering issue by removing the global overlay
+/// and adopting a local "Padded Cell" rendering architecture.
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -71,6 +73,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   StreamSubscription? _moveSubscription;
 
   dynamic get _animatedState {
+    // This getter provides access to the correct animated list/grid state.
     if (_listKey.currentState is AnimatedListState) {
       return _listKey.currentState as AnimatedListState;
     }
@@ -113,6 +116,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       required double alignment}) async {
     if (!mounted || !_scrollController.hasClients) return;
 
+    // This logic performs a two-step scroll for accuracy:
+    // 1. A quick jump to an estimated position.
+    // 2. After the frame renders, a precise animation to the final position.
     final averageHeight = widget.controller.getAverageItemHeight();
     double estimatedOffset = index * averageHeight;
     _scrollController.jumpTo(estimatedOffset.clamp(
@@ -168,6 +174,8 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     });
     _moveSubscription = widget.controller.moveStream.listen((MovedItem moved) {
       if (_animatedState == null) return;
+      // This is a workaround for moving items in an animated list.
+      // It removes the item instantly and re-inserts it with an animation.
       _animatedState.removeItem(
         moved.oldIndex,
         (context, animation) => const SizedBox.shrink(),
@@ -190,12 +198,14 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    // The border system is now self-contained within the itemBuilder,
-    // so no special logic is needed here.
-    return _buildRegular(widget.controller.length);
+    // **[FIXED]** The flawed `QuantumBorderOverlay` has been completely removed.
+    // The border logic is now self-contained within the `_itemBuilder` thanks
+    // to the new `QuantumBorderTracker` architecture.
+    return _buildList();
   }
 
-  Widget _buildRegular(int itemCount) {
+  Widget _buildList() {
+    final itemCount = widget.controller.length;
     switch (widget.type) {
       case QuantumListType.list:
         return AnimatedList(
@@ -203,6 +213,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           controller: _scrollController,
           initialItemCount: itemCount,
           padding: widget.padding,
+          physics: widget.physics,
+          reverse: widget.reverse,
+          scrollDirection: widget.scrollDirection,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
         );
@@ -212,6 +225,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           controller: _scrollController,
           initialItemCount: itemCount,
           padding: widget.padding,
+          physics: widget.physics,
+          reverse: widget.reverse,
+          scrollDirection: widget.scrollDirection,
           gridDelegate: widget.gridDelegate!,
           itemBuilder: (context, index, animation) =>
               _itemBuilder(context, index, animation),
@@ -224,16 +240,20 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       {bool isRemoving = false}) {
     T item;
     if (isRemoving) {
+      // If the item is being removed, use the last known data for the exit animation.
       final removedItem = widget.controller.lastRemovedItem;
       if (removedItem == null) return const SizedBox.shrink();
       item = removedItem;
     } else {
+      // Ensure we don't access an index that is out of bounds.
       if (index >= widget.controller.length) {
         return const SizedBox.shrink();
       }
       item = widget.controller[index];
     }
 
+    // This StreamBuilder ensures that if an item's data is updated via `updateProperty`,
+    // only that specific item rebuilds, not the whole list.
     return StreamBuilder<int>(
       stream: widget.controller.updateStream
           .where((updatedIndex) => updatedIndex == index),
@@ -242,7 +262,10 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
         Widget child =
             widget.animationBuilder(context, index, currentItem, animation);
 
-        // The re-architected border logic is now seamlessly integrated here.
+        // **[NEW ARCHITECTURE]**
+        // The border logic is now seamlessly and correctly integrated here.
+        // If a border controller is provided and the item is a QuantumEntity,
+        // the QuantumBorderTracker will wrap the child and handle all border rendering.
         if (widget.borderController != null && currentItem is QuantumEntity) {
           child = QuantumBorderTracker(
             borderController: widget.borderController!,
@@ -251,6 +274,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           );
         }
 
+        // This widget tracks the item's height for accurate scrolling.
         return QuantumPositionTracker(
           index: index,
           controller: widget.controller,
@@ -261,6 +285,8 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   }
 }
 
+/// A helper widget that measures its child's height after it has been rendered
+/// and registers it with the controller for the "Quantum Jump" scroll feature.
 class QuantumPositionTracker extends StatefulWidget {
   final Widget child;
   final int index;
@@ -281,16 +307,16 @@ class _QuantumPositionTrackerState extends State<QuantumPositionTracker> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(_measureHeight);
+    WidgetsBinding.instance.addPostFrameCallback(_measure);
   }
 
   @override
   void didUpdateWidget(covariant QuantumPositionTracker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance.addPostFrameCallback(_measureHeight);
+    WidgetsBinding.instance.addPostFrameCallback(_measure);
   }
 
-  void _measureHeight(_) {
+  void _measure(_) {
     if (!mounted) return;
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox != null && renderBox.hasSize) {
