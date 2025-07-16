@@ -1,6 +1,6 @@
 name: example
-description: یک پروژه نمونه برای نمایش قابلیت‌های پکیج قدرتمند quantum_list.
-publish_to: 'none' # به pub.dev اعلام می‌کند که این پروژه نمونه را منتشر نکند.
+description: A showcase of the revolutionary QuantumList package.
+publish_to: 'none' 
 
 version: 1.0.0+1
 
@@ -11,14 +11,19 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # این بخش مهم‌ترین قسمت است
-  # به پروژه می‌گوید که پکیج را از پوشه والد (../) بخواند
+  # وابستگی به پکیج اصلی که در پوشه قبلی قرار دارد
   quantum_list:
     path: ../
+
+  # وابستگی برای انتخاب رنگ
+  flutter_colorpicker: ^1.0.3
+
+  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
   flutter_lints: ^2.0.0
 
 flutter:

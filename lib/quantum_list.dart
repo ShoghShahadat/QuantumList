@@ -6,29 +6,36 @@ export 'src/quantum_list_controller.dart';
 export 'src/controllers/filterable_quantum_list_controller.dart';
 export 'src/controllers/scrollable_quantum_list_controller.dart';
 export 'src/controllers/notifying_quantum_list_controller.dart';
-export 'src/controllers/quantum_widget_controller.dart'; // <-- [جدید] معرفی کنترلر انقلابی به جهان
+export 'src/controllers/quantum_widget_controller.dart';
 export 'src/enums.dart';
-export 'src/models.dart'
-    show
-        QuantumEntity,
-        RemovedItem,
-        MovedItem; // <-- [اصلاح شده] موجودیت کوانتومی نیز اکسپورت می‌شود
+export 'src/models.dart';
 export 'src/widgets/animated_border_card.dart';
 export 'src/widgets/quantum_animations.dart';
 export 'src/widgets/quantum_atom.dart';
+// Exporting the entire border system
+export 'src/border/quantum_border.dart';
+export 'src/border/quantum_border_controller.dart';
 
 // Importing internal implementation
 import 'src/quantum_list_controller.dart';
 import 'src/controllers/scrollable_quantum_list_controller.dart';
 import 'src/enums.dart';
 import 'src/models.dart';
+// Importing internal border system files
+import 'src/border/quantum_border_controller.dart';
+import 'src/border/quantum_border_overlay.dart';
+import 'src/border/quantum_border_tracker.dart';
 
-/// The powerful QuantumList widget - Version 8.0.0 with Quantum Jump & Smooth Landing
+/// The powerful QuantumList widget - Version 9.0.0 with Quantum Border System
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
           BuildContext context, int index, T item, Animation<double> animation)
       animationBuilder;
+
+  // The border system controller
+  final QuantumBorderController? borderController;
+
   final QuantumListType type;
   final bool isSliver;
   final SliverGridDelegate? gridDelegate;
@@ -43,6 +50,7 @@ class QuantumList<T> extends StatefulWidget {
     Key? key,
     required this.controller,
     required this.animationBuilder,
+    this.borderController,
     this.type = QuantumListType.list,
     this.isSliver = false,
     this.gridDelegate,
@@ -111,15 +119,12 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _subscribeToEvents();
   }
 
-  /// **[نهایی]** پیاده‌سازی معماری "پرش کوانتومی و فرود نرم"
-  /// **[Final]** Implements the "Quantum Jump & Smooth Landing" architecture.
   Future<void> _ensureVisible(int index,
       {required Duration duration,
       required Curve curve,
       double? alignment}) async {
     if (!mounted) return;
 
-    // Phase 1: Pre-render path if necessary
     bool isPathKnown = true;
     for (int i = 0; i < index; i++) {
       if (widget.controller.getCachedHeight(i) == null) {
@@ -134,11 +139,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
     if (!mounted) return;
 
-    // Phase 2: Perform the Quantum Jump & Smooth Landing
     await _performHybridScroll(index, duration, curve, alignment);
   }
 
-  /// Measures all unknown item heights up to the target index off-screen.
   Future<void> _measurePathTo(int targetIndex) async {
     while (true) {
       if (!mounted) return;
@@ -153,7 +156,7 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       }
 
       if (isPathKnown) {
-        break; // Mission accomplished
+        break;
       }
 
       final batch =
@@ -163,7 +166,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     }
   }
 
-  /// Measures a specific batch of unknown item heights off-screen.
   Future<void> _measureBatchOffScreen(List<int> indicesToMeasure) async {
     if (indicesToMeasure.isEmpty || !mounted) return;
 
@@ -222,12 +224,10 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     return completer.future;
   }
 
-  /// Performs the hybrid scroll: Jumps near the target, then animates the rest.
   Future<void> _performHybridScroll(
       int index, Duration duration, Curve curve, double? alignment) async {
     if (!_scrollController.hasClients) return;
 
-    // Calculate the final precise offset for the target item.
     double finalTargetOffset = 0;
     for (int i = 0; i < index; i++) {
       finalTargetOffset += widget.controller.getCachedHeight(i) ??
@@ -247,7 +247,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       _scrollController.position.maxScrollExtent,
     );
 
-    // Calculate the jump point (e.g., 2 viewports before the final target)
     final jumpPadding = viewportDimension * 2;
     final direction = finalTargetOffset > _scrollController.offset ? 1.0 : -1.0;
     double jumpTargetOffset = finalTargetOffset - (jumpPadding * direction);
@@ -257,14 +256,11 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       _scrollController.position.maxScrollExtent,
     );
 
-    // Perform the instant JUMP to the staging area.
     _scrollController.jumpTo(jumpTargetOffset);
 
-    // Wait a frame for the jump to settle and UI to update.
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
 
-    // Perform the final ANIMATION for a smooth landing.
     if (duration == Duration.zero) {
       _scrollController.jumpTo(finalTargetOffset);
     } else {
@@ -318,11 +314,22 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   @override
   Widget build(BuildContext context) {
     final itemCount = widget.controller.length;
+    Widget listWidget;
+
     if (widget.isSliver) {
-      return _buildSliver(itemCount);
+      listWidget = _buildSliver(itemCount);
     } else {
-      return _buildRegular(itemCount);
+      listWidget = _buildRegular(itemCount);
     }
+
+    if (widget.borderController != null) {
+      return QuantumBorderOverlay(
+        controller: widget.borderController!,
+        child: listWidget,
+      );
+    }
+
+    return listWidget;
   }
 
   Widget _buildSliver(int itemCount) {
@@ -359,16 +366,26 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     if (index >= widget.controller.length) {
       return const SizedBox.shrink();
     }
+
+    final item = widget.controller[index];
+    Widget child = widget.animationBuilder(context, index, item, animation);
+
+    if (widget.borderController != null && item is QuantumEntity) {
+      child = QuantumBorderTracker(
+        borderController: widget.borderController!,
+        entity: item,
+        child: child,
+      );
+    }
+
     return QuantumPositionTracker(
       index: index,
       controller: widget.controller,
-      child: widget.animationBuilder(
-          context, index, widget.controller[index], animation),
+      child: child,
     );
   }
 }
 
-/// This invisible widget measures its child's height and registers it in the controller.
 class QuantumPositionTracker extends StatefulWidget {
   final Widget child;
   final int index;
