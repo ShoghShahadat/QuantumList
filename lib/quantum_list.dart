@@ -47,9 +47,6 @@ class QuantumList<T> extends StatefulWidget {
   final ScrollPhysics? physics;
   final bool reverse;
   final EdgeInsetsGeometry? padding;
-
-  /// **[NEW]** An optional external scroll controller for advanced use cases like sticky headers.
-  /// **[جدید]** یک کنترلر اسکرول خارجی اختیاری برای موارد استفاده پیشرفته مانند هدرهای چسبان.
   final ScrollController? scrollController;
 
   const QuantumList({
@@ -104,7 +101,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   void initState() {
     super.initState();
 
-    // Use external controller if provided, otherwise create an internal one.
     if (widget.scrollController == null) {
       _scrollController = ScrollController();
       _isInternalScrollController = true;
@@ -166,7 +162,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
   @override
   void dispose() {
-    // Only dispose the controller if it was created internally.
     if (_isInternalScrollController) {
       _scrollController.dispose();
     }
@@ -236,10 +231,13 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
         Animation<double> itemAnimation = animation;
         if (widget.choreography != null && !isRemoving) {
+          // **[MODIFIED]** Pass totalItems to the getAnimation method.
+          // **[اصلاح شد]** پاس دادن تعداد کل آیتم‌ها به متد getAnimation.
           itemAnimation = widget.choreography!.getAnimation(
             parent: animation,
             index: index,
             totalDuration: widget.animationDuration,
+            totalItems: widget.controller.length,
           );
         }
 

@@ -21,7 +21,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
   QuantumAnimationType _selectedAnimation = QuantumAnimationType.scaleIn;
   PhysicsType _selectedPhysics = PhysicsType.Bouncing;
   ChoreographyType _selectedChoreography = ChoreographyType.simultaneous;
-  // **[NEW]** State for the scroll transformation switch.
   bool _isScrollTransformEnabled = false;
   double _slideOffset = 50.0;
   bool _isReversed = false;
@@ -29,7 +28,7 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
   @override
   void initState() {
     super.initState();
-    _addWidgets(15); // Add more widgets to make scrolling more visible
+    _addWidgets(15);
   }
 
   void _addWidgets(int count) {
@@ -74,12 +73,18 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
     }
   }
 
+  /// **[MODIFIED]** Now returns the new choreography types.
+  /// **[اصلاح شد]** اکنون انواع جدید رقص نور را برمی‌گرداند.
   QuantumChoreography _getChoreography() {
     switch (_selectedChoreography) {
       case ChoreographyType.staggered:
         return QuantumChoreography.staggered();
       case ChoreographyType.wave:
         return QuantumChoreography.wave();
+      case ChoreographyType.spiral:
+        return QuantumChoreography.spiral();
+      case ChoreographyType.distanceFromCenter:
+        return QuantumChoreography.distanceFromCenter();
       case ChoreographyType.simultaneous:
       default:
         return const QuantumChoreography();
@@ -101,7 +106,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         reverse: _isReversed,
         physics: _getScrollPhysics(),
         choreography: _getChoreography(),
-        // **[NEW]** Conditionally pass the transformation object.
         scrollTransformation: _isScrollTransformEnabled
             ? const QuantumScrollTransformation()
             : null,
@@ -141,7 +145,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         isReversed: _isReversed,
         selectedPhysics: _selectedPhysics,
         selectedChoreography: _selectedChoreography,
-        // **[NEW]** Pass the state and callback for the new switch.
         isScrollTransformEnabled: _isScrollTransformEnabled,
         onScrollTransformChanged: (value) =>
             setState(() => _isScrollTransformEnabled = value),
