@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-import 'scrollable_quantum_list_controller.dart';
+// **[FIXED]** Imports from the new barrel file for consistency.
+import 'controllers.dart';
 
-/// یک کنترلر تخصصی که سیستم اطلاع‌رسانی رویدادهای اسکرول را به کوانتوم لیست اضافه می‌کند.
 /// A specialized controller that adds a scroll event notification system to QuantumList.
 class NotifyingQuantumListController<T>
     extends ScrollableQuantumListController<T> {
-  /// زمانی فراخوانی می‌شود که اسکرول به انتهای لیست می‌رسد.
   /// Called when the scroll reaches the end of the list.
   final VoidCallback? onAtEnd;
 
-  /// زمانی فراخوانی می‌شود که اسکرول به ابتدای لیست می‌رسد.
   /// Called when the scroll reaches the start of the list.
   final VoidCallback? onAtStart;
 
-  /// فاصله‌ای از انتها/ابتدا (بر حسب پیکسل) که رویداد باید فعال شود.
   /// The offset from the end/start (in pixels) at which the event should be triggered.
   final double scrollThreshold;
 
   bool _isAtEndNotified = false;
-  bool _isAtStartNotified = true; // در ابتدا، در ابتدای لیست هستیم
+  bool _isAtStartNotified = true; // Initially, we are at the start.
 
   NotifyingQuantumListController(
     super.initialItems, {
@@ -38,7 +35,7 @@ class NotifyingQuantumListController<T>
 
     final position = scrollController!.position;
 
-    // بررسی رسیدن به انتهای لیست
+    // Check for reaching the end
     if (onAtEnd != null) {
       if (position.pixels >= position.maxScrollExtent - scrollThreshold) {
         if (!_isAtEndNotified) {
@@ -46,12 +43,11 @@ class NotifyingQuantumListController<T>
           onAtEnd!();
         }
       } else if (position.pixels < position.maxScrollExtent - scrollThreshold) {
-        // ریست کردن وضعیت برای فراخوانی مجدد در آینده
         _isAtEndNotified = false;
       }
     }
 
-    // بررسی رسیدن به ابتدای لیست
+    // Check for reaching the start
     if (onAtStart != null) {
       if (position.pixels <= position.minScrollExtent + scrollThreshold) {
         if (!_isAtStartNotified) {
@@ -59,7 +55,6 @@ class NotifyingQuantumListController<T>
           onAtStart!();
         }
       } else if (position.pixels > position.minScrollExtent + scrollThreshold) {
-        // ریست کردن وضعیت برای فراخوانی مجدد در آینده
         _isAtStartNotified = false;
       }
     }

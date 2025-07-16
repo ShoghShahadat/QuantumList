@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:quantum_list/quantum_list.dart';
 import 'dart:async';
-import '../quantum_list_controller.dart';
-import '../enums.dart';
+// **[FIXED]** Imports from the new barrel file for consistency.
+import 'controllers.dart';
+// import '../../enums.dart';
 
 /// A specialized controller that now has accurate item scrolling capabilities.
 class ScrollableQuantumListController<T> extends QuantumListController<T> {
@@ -49,8 +51,7 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
     );
   }
 
-  /// **[NEW]** Scrolls directly to a specific index in the list.
-  /// This is the core of the "Quantum Jump" feature.
+  /// Scrolls directly to a specific index in the list.
   Future<void> scrollToIndex(
     int index, {
     Duration duration = const Duration(milliseconds: 800),
@@ -88,7 +89,6 @@ class ScrollableQuantumListController<T> extends QuantumListController<T> {
         break;
     }
 
-    // Trigger the new, intelligent search and scroll mechanism.
     await _ensureVisibleCallback?.call(
       index,
       duration: duration,

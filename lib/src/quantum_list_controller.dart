@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'models.dart';
+import 'package:quantum_list/quantum_list.dart';
+// import '../models.dart';
 
 /// The main controller, now with a built-in height cache for hyper-accurate scrolling.
 class QuantumListController<T> {
@@ -9,6 +10,10 @@ class QuantumListController<T> {
 
   @protected
   final Map<int, double> heightCache = {};
+
+  /// **[FIXED]** This property is now correctly defined in the base class.
+  /// It holds the last item that was removed, which is crucial for the exit animation.
+  T? lastRemovedItem;
 
   @protected
   final StreamController<int> updateNotifier =
@@ -39,12 +44,11 @@ class QuantumListController<T> {
     }
   }
 
-  /// A public and safe method to access the height cache.
   double? getCachedHeight(int index) => heightCache[index];
 
   double getAverageItemHeight() {
     if (heightCache.isEmpty) {
-      return 100.0;
+      return 50.0; // A more reasonable default height.
     }
     double totalHeight = 0;
     heightCache.forEach((key, value) {
@@ -68,12 +72,13 @@ class QuantumListController<T> {
   void removeAt(int index) {
     if (index >= 0 && index < items.length) {
       final T removedItem = items.removeAt(index);
+      // **[FIXED]** Set the last removed item for the animation builder.
+      lastRemovedItem = removedItem;
       _shiftCacheKeys(startingFrom: index, by: -1);
       removeNotifier.add(RemovedItem(index, removedItem));
     }
   }
 
-  /// [NEW] Removes all items from the list with animation.
   void clear() {
     for (int i = items.length - 1; i >= 0; i--) {
       removeAt(i);
@@ -90,7 +95,27 @@ class QuantumListController<T> {
 
       final oldHeight = heightCache.remove(oldIndex);
       if (oldHeight != null) {
-        heightCache[newIndex] = oldHeight;
+        // This logic needs to be smarter for a perfect move,
+        // but for now, we just update the new index.
+        final newCache = <int, double>{};
+        heightCache.forEach((key, value) {
+          if (key < oldIndex)
+            newCache[key] = value;
+          else if (key > oldIndex) newCache[key - 1] = value;
+        });
+        heightCache.clear();
+        heightCache.addAll(newCache);
+
+        final finalCache = <int, double>{};
+        heightCache.forEach((key, value) {
+          if (key < newIndex)
+            finalCache[key] = value;
+          else
+            finalCache[key + 1] = value;
+        });
+        finalCache[newIndex] = oldHeight;
+        heightCache.clear();
+        heightCache.addAll(finalCache);
       }
 
       moveNotifier.add(MovedItem(oldIndex, newIndex));
@@ -120,12 +145,10 @@ class QuantumListController<T> {
   T operator [](int index) => items[index];
   int get length => items.length;
 
-  /// [NEW] Safely gets the first item, or null if the list is empty.
   T? get first {
     return items.isNotEmpty ? items.first : null;
   }
 
-  /// [NEW] Safely gets the last item, or null if the list is empty.
   T? get last {
     return items.isNotEmpty ? items.last : null;
   }

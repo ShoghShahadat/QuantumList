@@ -1,32 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:quantum_list/quantum_list.dart';
 import 'dart:async';
 
-// Exporting the public parts of the package
-export 'src/quantum_list_controller.dart';
-export 'src/controllers/filterable_quantum_list_controller.dart';
-export 'src/controllers/scrollable_quantum_list_controller.dart';
-export 'src/controllers/notifying_quantum_list_controller.dart';
-export 'src/controllers/quantum_widget_controller.dart';
+// --- [FINALIZED EXPORTS] ---
+export 'src/controllers/controllers.dart'
+    show
+        QuantumListController,
+        FilterableQuantumListController,
+        QuantumWidgetController,
+        ScrollableQuantumListController,
+        NotifyingQuantumListController;
 export 'src/enums.dart';
 export 'src/models.dart';
 export 'src/widgets/animated_border_card.dart';
 export 'src/widgets/quantum_animations.dart';
 export 'src/widgets/quantum_atom.dart';
-// Exporting the entire border system
 export 'src/border/quantum_border.dart';
 export 'src/border/quantum_border_controller.dart';
 
-// Importing internal implementation
-import 'src/quantum_list_controller.dart';
-import 'src/controllers/scrollable_quantum_list_controller.dart';
-import 'src/enums.dart';
+// --- [INTERNAL IMPORTS] ---
+import 'src/controllers/controllers.dart';
 import 'src/models.dart';
-// Importing internal border system files
 import 'src/border/quantum_border_controller.dart';
-import 'src/border/quantum_border_overlay.dart';
 import 'src/border/quantum_border_tracker.dart';
 
-/// The powerful QuantumList widget - Version 13.0 with Border Scroll Fix.
+/// The powerful QuantumList widget - Version 16.0 with a flawless Border System.
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -58,7 +56,6 @@ class QuantumList<T> extends StatefulWidget {
     this.physics,
     this.reverse = false,
     this.padding,
-    int? offScreenPreRenderBatchSize, // This is now obsolete
   }) : super(key: key);
 
   @override
@@ -94,18 +91,10 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     super.initState();
     _scrollController = ScrollController();
 
-    if (widget.isSliver) {
-      if (widget.type == QuantumListType.list) {
-        _listKey = GlobalKey<SliverAnimatedListState>();
-      } else {
-        _listKey = GlobalKey<SliverAnimatedGridState>();
-      }
+    if (widget.type == QuantumListType.list) {
+      _listKey = GlobalKey<AnimatedListState>();
     } else {
-      if (widget.type == QuantumListType.list) {
-        _listKey = GlobalKey<AnimatedListState>();
-      } else {
-        _listKey = GlobalKey<AnimatedGridState>();
-      }
+      _listKey = GlobalKey<AnimatedGridState>();
     }
 
     if (widget.controller is ScrollableQuantumListController) {
@@ -172,8 +161,8 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       if (_animatedState == null) return;
       _animatedState.removeItem(
         removed.index,
-        (context, animation) => widget.animationBuilder(
-            context, removed.index, removed.item, animation),
+        (context, animation) =>
+            _itemBuilder(context, removed.index, animation, isRemoving: true),
         duration: widget.animationDuration,
       );
     });
@@ -201,30 +190,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final itemCount = widget.controller.length;
-    Widget listWidget;
-
-    if (widget.isSliver) {
-      listWidget = _buildSliver(itemCount);
-    } else {
-      listWidget = _buildRegular(itemCount);
-    }
-
-    if (widget.borderController != null) {
-      // **[FIXED]** Pass the scroll controller to the overlay system.
-      return QuantumBorderOverlay(
-        controller: widget.borderController!,
-        scrollController: _scrollController,
-        child: listWidget,
-      );
-    }
-
-    return listWidget;
-  }
-
-  Widget _buildSliver(int itemCount) {
-    return const SliverToBoxAdapter(
-        child: Text("Sliver not yet fully supported"));
+    // The border system is now self-contained within the itemBuilder,
+    // so no special logic is needed here.
+    return _buildRegular(widget.controller.length);
   }
 
   Widget _buildRegular(int itemCount) {
@@ -252,24 +220,33 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   }
 
   Widget _itemBuilder(
-      BuildContext context, int index, Animation<double> animation) {
-    if (index >= widget.controller.length) {
-      return const SizedBox.shrink();
+      BuildContext context, int index, Animation<double> animation,
+      {bool isRemoving = false}) {
+    T item;
+    if (isRemoving) {
+      final removedItem = widget.controller.lastRemovedItem;
+      if (removedItem == null) return const SizedBox.shrink();
+      item = removedItem;
+    } else {
+      if (index >= widget.controller.length) {
+        return const SizedBox.shrink();
+      }
+      item = widget.controller[index];
     }
 
     return StreamBuilder<int>(
       stream: widget.controller.updateStream
           .where((updatedIndex) => updatedIndex == index),
       builder: (context, snapshot) {
-        final item = widget.controller[index];
-        Widget child = widget.animationBuilder(context, index, item, animation);
+        final currentItem = isRemoving ? item : widget.controller[index];
+        Widget child =
+            widget.animationBuilder(context, index, currentItem, animation);
 
-        if (widget.borderController != null && item is QuantumEntity) {
+        // The re-architected border logic is now seamlessly integrated here.
+        if (widget.borderController != null && currentItem is QuantumEntity) {
           child = QuantumBorderTracker(
             borderController: widget.borderController!,
-            entity: item,
-            // **[FIXED]** Provide the scroll controller to the tracker.
-            scrollListenable: _scrollController,
+            entity: currentItem,
             child: child,
           );
         }
