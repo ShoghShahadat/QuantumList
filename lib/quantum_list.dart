@@ -119,10 +119,11 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     _subscribeToEvents();
   }
 
+  /// **[FIXED]** The signature now perfectly matches the controller's callback definition.
   Future<void> _ensureVisible(int index,
       {required Duration duration,
       required Curve curve,
-      double? alignment}) async {
+      required double alignment}) async {
     if (!mounted) return;
 
     bool isPathKnown = true;
@@ -224,8 +225,9 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     return completer.future;
   }
 
+  /// **[FIXED]** The `alignment` parameter is no longer nullable.
   Future<void> _performHybridScroll(
-      int index, Duration duration, Curve curve, double? alignment) async {
+      int index, Duration duration, Curve curve, double alignment) async {
     if (!_scrollController.hasClients) return;
 
     double finalTargetOffset = 0;
@@ -234,13 +236,12 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
           widget.controller.getAverageItemHeight();
     }
 
-    final alignmentValue = alignment ?? 0.0;
     final viewportDimension = _scrollController.position.viewportDimension;
     final targetItemHeight = widget.controller.getCachedHeight(index) ??
         widget.controller.getAverageItemHeight();
 
-    finalTargetOffset -=
-        (viewportDimension - targetItemHeight) * alignmentValue;
+    // The null check is removed as `alignment` is now guaranteed to be a double.
+    finalTargetOffset -= (viewportDimension - targetItemHeight) * alignment;
 
     finalTargetOffset = finalTargetOffset.clamp(
       _scrollController.position.minScrollExtent,
@@ -361,27 +362,19 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     }
   }
 
-  /// **[FIXED]** The core of the atomic update fix.
-  /// This builder now wraps each item in a StreamBuilder to listen for
-  /// targeted update events from the controller.
   Widget _itemBuilder(
       BuildContext context, int index, Animation<double> animation) {
     if (index >= widget.controller.length) {
       return const SizedBox.shrink();
     }
 
-    // This StreamBuilder is the key to atomic updates.
     return StreamBuilder<int>(
-      // Listen to the controller's update stream, but only for this specific index.
       stream: widget.controller.updateStream
           .where((updatedIndex) => updatedIndex == index),
       builder: (context, snapshot) {
-        // This builder re-runs whenever an update for this index is fired.
-        // It fetches the NEWEST version of the item from the controller.
         final item = widget.controller[index];
         Widget child = widget.animationBuilder(context, index, item, animation);
 
-        // The BorderTracker and PositionTracker are applied to the newly built child.
         if (widget.borderController != null && item is QuantumEntity) {
           child = QuantumBorderTracker(
             borderController: widget.borderController!,
