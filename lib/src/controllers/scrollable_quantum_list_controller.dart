@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
+import 'package:quantum_list/src/enums.dart';
 import 'dart:async';
 // **[FIXED]** Imports from the new barrel file for consistency.
 import 'controllers.dart';

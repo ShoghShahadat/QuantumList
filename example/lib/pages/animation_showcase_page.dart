@@ -20,21 +20,21 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
   // State for the control panel
   QuantumAnimationType _selectedAnimation = QuantumAnimationType.scaleIn;
   PhysicsType _selectedPhysics = PhysicsType.Bouncing;
-  // **[NEW]** State for the selected choreography.
   ChoreographyType _selectedChoreography = ChoreographyType.simultaneous;
+  // **[NEW]** State for the scroll transformation switch.
+  bool _isScrollTransformEnabled = false;
   double _slideOffset = 50.0;
   bool _isReversed = false;
 
   @override
   void initState() {
     super.initState();
-    _addWidgets(5);
+    _addWidgets(15); // Add more widgets to make scrolling more visible
   }
 
   void _addWidgets(int count) {
     _listController.clear();
     _widgetCounter = 0;
-    // Use a post-frame callback to ensure the list is cleared before adding new items.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (int i = 0; i < count; i++) {
         _widgetCounter++;
@@ -74,7 +74,6 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
     }
   }
 
-  // **[NEW]** Helper to get the choreography object from the selected enum.
   QuantumChoreography _getChoreography() {
     switch (_selectedChoreography) {
       case ChoreographyType.staggered:
@@ -98,12 +97,14 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
     return Scaffold(
       body: QuantumList<QuantumEntity>(
         controller: _listController,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 50.0, horizontal: 12.0),
         reverse: _isReversed,
         physics: _getScrollPhysics(),
-        // **[NEW]** The choreography director is now passed to the list.
         choreography: _getChoreography(),
-        // We set a longer duration to better see the choreography effects.
+        // **[NEW]** Conditionally pass the transformation object.
+        scrollTransformation: _isScrollTransformEnabled
+            ? const QuantumScrollTransformation()
+            : null,
         animationDuration: const Duration(milliseconds: 1200),
         animationBuilder: (context, index, entity, animation) {
           switch (_selectedAnimation) {
@@ -139,14 +140,16 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         slideOffset: _slideOffset,
         isReversed: _isReversed,
         selectedPhysics: _selectedPhysics,
-        // **[NEW]** Pass choreography state to the control panel.
         selectedChoreography: _selectedChoreography,
+        // **[NEW]** Pass the state and callback for the new switch.
+        isScrollTransformEnabled: _isScrollTransformEnabled,
+        onScrollTransformChanged: (value) =>
+            setState(() => _isScrollTransformEnabled = value),
         onChoreographyChanged: (type) {
           if (type != null) {
             setState(() {
               _selectedChoreography = type;
-              // Re-add widgets to showcase the new choreography from the start.
-              _addWidgets(10);
+              _addWidgets(15);
             });
           }
         },
@@ -162,7 +165,7 @@ class _AnimationShowcasePageState extends State<AnimationShowcasePage> {
         },
         onSlideOffsetChanged: (value) => setState(() => _slideOffset = value),
         onReversedChanged: (value) => setState(() => _isReversed = value),
-        onAdd: () => _addWidgets(10),
+        onAdd: () => _addWidgets(15),
         onRemove: _removeWidget,
         onClear: _clearList,
       ),

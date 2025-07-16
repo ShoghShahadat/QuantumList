@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:quantum_list/quantum_list.dart';
+import 'package:quantum_list/src/models.dart';
 // import '../models.dart';
 
 /// The main controller, now with a built-in height cache for hyper-accurate scrolling.

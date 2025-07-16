@@ -2,6 +2,10 @@ import 'package:example/pages/animation_showcase_page.dart';
 import 'package:example/pages/border_showcase_page.dart';
 import 'package:example/pages/controller_showcase_page.dart';
 import 'package:example/pages/performance_showcase_page.dart';
+import 'package:example/pages/time_travel_showcase_page.dart';
+// **[NEW]** Importing the new magnetic items showcase page.
+// ایمپورت کردن صفحه جدید نمایش آیتم‌های مغناطیسی.
+import 'package:example/pages/magnetic_showcase_page.dart';
 import 'package:flutter/material.dart';
 
 /// The main application widget that holds the tabbed navigation.
@@ -11,13 +15,17 @@ class ShowcaseApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // The number of tabs
+      // **[MODIFIED]** Increased tab count to 6.
+      // تعداد تب‌ها به ۶ افزایش یافت.
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('QuantumList Showcase'),
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
+              Tab(text: 'Magnetic Items', icon: Icon(Icons.push_pin_outlined)),
+              Tab(text: 'Time Travel', icon: Icon(Icons.history)),
               Tab(
                   text: 'Quantum Borders',
                   icon: Icon(Icons.view_quilt_outlined)),
@@ -30,16 +38,13 @@ class ShowcaseApp extends StatelessWidget {
         body: const TabBarView(
           physics: NeverScrollableScrollPhysics(), // To prevent swipe conflicts
           children: [
-            // Tab 1: The fully functional Border Showcase
+            // **[NEW]** The new Magnetic Items showcase page.
+            // صفحه جدید نمایش آیتم‌های مغناطیسی.
+            MagneticShowcasePage(),
+            TimeTravelShowcasePage(),
             BorderShowcasePage(),
-
-            // Tab 2: The interactive Animation Showcase
             AnimationShowcasePage(),
-
-            // Tab 3: The Controller Showcase
             ControllerShowcasePage(),
-
-            // Tab 4: The new Performance Stress Test
             PerformanceShowcasePage(),
           ],
         ),
