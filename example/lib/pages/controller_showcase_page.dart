@@ -1,5 +1,6 @@
 import 'package:example/pages/controller_demos/filterable_controller_demo.dart';
-import 'package:example/pages/controller_demos/widget_controller_demo.dart';
+
+import 'package:example/pages/pages/controller_demos/news_feed_demo.dart';
 import 'package:flutter/material.dart';
 
 /// A page that contains a TabBar to switch between demos for the two
@@ -15,14 +16,15 @@ class ControllerShowcasePage extends StatelessWidget {
         children: [
           TabBar(
             tabs: [
-              const Tab(text: 'Widget Controller'),
+              const Tab(text: 'Widget Controller (News Feed)'),
               const Tab(text: 'Filterable Controller'),
             ],
           ),
           const Expanded(
             child: TabBarView(
               children: [
-                WidgetControllerDemo(),
+                // The new, impressive News Feed Demo
+                NewsFeedDemo(),
                 FilterableControllerDemo(),
               ],
             ),

@@ -361,27 +361,41 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
     }
   }
 
+  /// **[FIXED]** The core of the atomic update fix.
+  /// This builder now wraps each item in a StreamBuilder to listen for
+  /// targeted update events from the controller.
   Widget _itemBuilder(
       BuildContext context, int index, Animation<double> animation) {
     if (index >= widget.controller.length) {
       return const SizedBox.shrink();
     }
 
-    final item = widget.controller[index];
-    Widget child = widget.animationBuilder(context, index, item, animation);
+    // This StreamBuilder is the key to atomic updates.
+    return StreamBuilder<int>(
+      // Listen to the controller's update stream, but only for this specific index.
+      stream: widget.controller.updateStream
+          .where((updatedIndex) => updatedIndex == index),
+      builder: (context, snapshot) {
+        // This builder re-runs whenever an update for this index is fired.
+        // It fetches the NEWEST version of the item from the controller.
+        final item = widget.controller[index];
+        Widget child = widget.animationBuilder(context, index, item, animation);
 
-    if (widget.borderController != null && item is QuantumEntity) {
-      child = QuantumBorderTracker(
-        borderController: widget.borderController!,
-        entity: item,
-        child: child,
-      );
-    }
+        // The BorderTracker and PositionTracker are applied to the newly built child.
+        if (widget.borderController != null && item is QuantumEntity) {
+          child = QuantumBorderTracker(
+            borderController: widget.borderController!,
+            entity: item,
+            child: child,
+          );
+        }
 
-    return QuantumPositionTracker(
-      index: index,
-      controller: widget.controller,
-      child: child,
+        return QuantumPositionTracker(
+          index: index,
+          controller: widget.controller,
+          child: child,
+        );
+      },
     );
   }
 }
