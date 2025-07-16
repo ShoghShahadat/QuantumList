@@ -7,8 +7,7 @@
   <img src="https://placehold.co/800x400/1E1E1E/FFFFFF?text=Your+Awesome+Project+GIF+Here" alt="Project Demo GIF"/>
 </p>
 
-### **[Check out the Live Demo!]** `(Link to your demo page)` | **[فارسی]** `(Link to Persian documentation)`
-
+### **[Check out the Live Demo!](https://shoghshahadat.github.io/QuantumList/)** | **[فارسی](https://github.com/ShoghShahadat/QuantumList/blob/main/Fa.md)**
 ---
 
 ## 1. Why Does QuantumList Exist?
@@ -120,7 +119,7 @@ QuantumList is more than a list; it's a complete ecosystem for building dynamic 
   // 1. Create and connect a border controller
   final _borderController = QuantumBorderController();
   QuantumList(borderController: _borderController, ...);
-
+  
   // 2. Add a dazzling, animated gradient border to a specific item
   _borderController.addBorder(
     borderId: "highlight_border",
@@ -154,7 +153,6 @@ QuantumList is more than a list; it's a complete ecosystem for building dynamic 
   
   // 2. Add Undo/Redo buttons
   ElevatedButton(onPressed: _controller.undo, child: Text("Undo"));
-  ElevatedButton(onPressed: _controller.redo, child: Text("Redo"));
   ```
 
 * **👆 Drag & Drop Reordering:** Intuitive user interaction.
@@ -171,6 +169,7 @@ QuantumList is more than a list; it's a complete ecosystem for building dynamic 
   // The controller handles the logic of fetching pages as the user scrolls
   final _controller = PaginatedQuantumListController<Product>(
     (page) => fetchProductsFromApi(page), // Your API fetching function
+    loadingIndicator: Center(child: CircularProgressIndicator()),
   );
   ```
 
@@ -282,7 +281,7 @@ _userController.sort((a, b) => a.name.compareTo(b.name));
 | `remove(String id)` | Removes a widget entity by its unique ID. |
 | `update(String id, Widget newWidget)` | Atomically updates the widget for a given ID. |
 | `getById(String id)` | Retrieves a `QuantumEntity` by its ID. |
-| `scrollTo(String id, ...)` | Animates the scroll position to the widget with the given ID. |
+| `scrollTo(String id, ...)`| Animates the scroll position to the widget with the given ID. |
 | `clear()` | Removes all items from the list. |
 
 #### `FilterableQuantumListController<T>`

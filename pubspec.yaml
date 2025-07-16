@@ -1,7 +1,7 @@
 name: quantum_list
-description: یک ویجت لیست انقلابی برای فلاتر با رندرینگ اتمی، انیمیشن‌های پیشرفته و کنترلرهای قدرتمند.
+description: A revolutionary list widget for Flutter with atomic rendering, advanced animations, and powerful controllers
 version: 1.3.0
-# homepage: # آدرس گیت‌هاب شما در اینجا قرار می‌گیرد
+homepage: https://github.com/ShoghShahadat/QuantumList
 
 environment:
   sdk: '>=2.18.0 <4.0.0'

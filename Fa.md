@@ -7,7 +7,7 @@
   <img src="https://placehold.co/800x400/1E1E1E/FFFFFF?text=Your+Awesome+Project+GIF+Here" alt="تصویری از دموی پروژه"/>
 </p>
 
-### **[مشاهده دموی زنده!]** `(لینک به صفحه دمو)` | **[English]** `(لینک به مستندات انگلیسی)`
+### **[مشاهده دموی زنده!](https://shoghshahadat.github.io/QuantumList/)** | **[English](https://github.com/ShoghShahadat/QuantumList/blob/main/README.md)**
 
 ---
 
@@ -165,11 +165,14 @@ animationBuilder: (context, index, entity, animation) {
   );
   ```
 
-* **📜 صفحه‌بندی هوشمند:** برای لیست‌های بی‌نهایت.
+* **📜 صفحه‌بندی هوشمند (Smart Pagination):** برای لیست‌های بی‌نهایت.
   ```dart
   // کنترلر، منطق دریافت صفحات هنگام اسکرول کاربر را مدیریت می‌کند
   final _controller = PaginatedQuantumListController<Product>(
-    (page) => fetchProductsFromApi(page), // تابع دریافت داده شما از API
+    // تابع شما برای دریافت داده از API
+    (page) => fetchProductsFromApi(page), 
+    // یک ویجت لودینگ سفارشی که در انتهای لیست نمایش داده می‌شود
+    loadingIndicator: Center(child: CircularProgressIndicator()),
   );
   ```
 
