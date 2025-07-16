@@ -87,7 +87,7 @@ class _UpdateCommand extends _QuantumCommand {
   }
 }
 
-// --- کنترلر سفر در زمان (نسخه مجهز به تاریخچه خوانا) ---
+// --- کنترلر سفر در زمان (نسخه مجهز به سفر به نقطه خاص) ---
 class TimeTravelQuantumWidgetController extends QuantumWidgetController {
   final List<_QuantumCommand> _undoStack = [];
   final List<_QuantumCommand> _redoStack = [];
@@ -99,8 +99,6 @@ class TimeTravelQuantumWidgetController extends QuantumWidgetController {
   bool get canUndo => _undoStack.isNotEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
 
-  /// **[NEW]** A public getter to expose the command history for the debugger.
-  /// **[جدید]** یک گتر عمومی برای ارائه تاریخچه دستورات به دیباگر.
   List<_QuantumCommand> get commandHistory => List.unmodifiable(_undoStack);
   List<_QuantumCommand> get redoHistory => List.unmodifiable(_redoStack);
 
@@ -125,6 +123,21 @@ class TimeTravelQuantumWidgetController extends QuantumWidgetController {
       _isInternalModification = false;
       _undoStack.add(command);
       _historyController.add(null);
+    }
+  }
+
+  /// **[NEW]** A powerful method to travel to a specific point in history.
+  /// **[جدید]** یک متد قدرتمند برای سفر به یک نقطه خاص در تاریخچه.
+  void travelTo(int commandIndex) {
+    if (commandIndex < 0 || commandIndex >= _undoStack.length) return;
+
+    // Calculate how many steps to undo.
+    final stepsToUndo = _undoStack.length - 1 - commandIndex;
+
+    if (stepsToUndo > 0) {
+      for (int i = 0; i < stepsToUndo; i++) {
+        undo();
+      }
     }
   }
 
