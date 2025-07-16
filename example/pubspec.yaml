@@ -1,6 +1,6 @@
 name: example
-description: A showcase of the revolutionary QuantumList package.
-publish_to: 'none' 
+description: A showcase application for the QuantumList package.
+publish_to: 'none' # Prevent accidental publishing.
 
 version: 1.0.0+1
 
@@ -11,11 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # وابستگی به پکیج اصلی که در پوشه قبلی قرار دارد
+  # Add the quantum_list package from the parent directory
   quantum_list:
     path: ../
 
-  # وابستگی برای انتخاب رنگ
+  # Dependency for the color picker in the settings panel
   flutter_colorpicker: ^1.0.3
 
   cupertino_icons: ^1.0.2
@@ -28,3 +28,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+

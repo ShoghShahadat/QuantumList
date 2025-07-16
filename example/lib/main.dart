@@ -1,24 +1,29 @@
-import 'package:example/pages/widget_entity_demo_page.dart';
+import 'package:example/showcase_app.dart';
 import 'package:flutter/material.dart';
 
 void main() {
   runApp(const QuantumExampleApp());
 }
 
-/// ویجت ریشه برنامه نمونه
+/// The root widget of the showcase application.
 class QuantumExampleApp extends StatelessWidget {
   const QuantumExampleApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantumList V10.0 - The Modular Revolution',
+      title: 'QuantumList Showcase',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
+        indicatorColor: Colors.purple.shade200,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E1E1E),
+          elevation: 4,
+        ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
@@ -42,7 +47,8 @@ class QuantumExampleApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WidgetEntityDemoPage(),
+      // The new root of the example app is the ShowcaseApp
+      home: const ShowcaseApp(),
     );
   }
 }

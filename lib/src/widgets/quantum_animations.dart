@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-/// یک کتابخانه از توابع کمکی برای ساخت انیمیشن‌های ورود زیبا و آماده.
 /// A library of helper functions for creating beautiful, pre-built entrance animations.
 class QuantumAnimations {
-  /// انیمیشن محو شدن (FadeIn) برای آیتم ورودی.
+  /// A fade-in animation for the incoming item.
   static Widget fadeIn(
     BuildContext context,
     Widget child,
@@ -13,7 +12,7 @@ class QuantumAnimations {
     return FadeTransition(opacity: animation, child: child);
   }
 
-  /// انیمیشن اسلاید و محو شدن از پایین.
+  /// A slide and fade-in animation from the bottom.
   static Widget slideInFromBottom(
     BuildContext context,
     Widget child,
@@ -32,7 +31,7 @@ class QuantumAnimations {
     );
   }
 
-  /// انیمیشن اسلاید و محو شدن از چپ.
+  /// A slide and fade-in animation from the left.
   static Widget slideInFromLeft(
     BuildContext context,
     Widget child,
@@ -51,8 +50,7 @@ class QuantumAnimations {
     );
   }
 
-  /// **[جدید]** انیمیشن اسلاید و محو شدن از راست.
-  /// **[New]** A slide and fade-in animation from the right.
+  /// A slide and fade-in animation from the right.
   static Widget slideInFromRight(
     BuildContext context,
     Widget child,
@@ -71,7 +69,7 @@ class QuantumAnimations {
     );
   }
 
-  /// انیمیشن بزرگ شدن و محو شدن (Scale & Fade).
+  /// A scale and fade-in animation.
   static Widget scaleIn(
     BuildContext context,
     Widget child,
@@ -86,24 +84,29 @@ class QuantumAnimations {
     );
   }
 
-  /// **[جدید]** انیمیشن چرخش سه‌بعدی حول محور Y.
-  /// **[New]** A 3D flip animation around the Y axis.
+  /// A professional 3D flip animation around the Y axis.
+  /// The child is only visible during the second half of the animation
+  /// to prevent a distorted "mirrored" view.
   static Widget flipInY(
     BuildContext context,
     Widget child,
     Animation<double> animation,
   ) {
-    final a = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+    final curvedAnimation =
+        CurvedAnimation(parent: animation, curve: Curves.easeOut);
     return AnimatedBuilder(
-      animation: a,
+      animation: curvedAnimation,
       child: child,
       builder: (context, child) {
+        final isAnimating = curvedAnimation.value < 1.0;
+        final isSecondHalf = curvedAnimation.value > 0.5;
         return Transform(
           transform: Matrix4.identity()
             ..setEntry(3, 2, 0.001) // perspective
-            ..rotateY(math.pi * (1 - a.value)),
+            ..rotateY(math.pi * (1 - curvedAnimation.value)),
           alignment: Alignment.center,
-          child: child,
+          // Only show the child in the second half of the flip
+          child: isSecondHalf || !isAnimating ? child : const SizedBox.shrink(),
         );
       },
     );
