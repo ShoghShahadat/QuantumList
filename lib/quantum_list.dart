@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-// import 'package:quantum_list/quantum_list.dart'; // This line was commented out in the original file, keeping it as is.
 import 'package:quantum_list/src/border/quantum_border_controller.dart';
 import 'package:quantum_list/src/border/quantum_border_tracker.dart';
 import 'package:quantum_list/src/controllers/controllers.dart';
@@ -10,10 +9,6 @@ import 'package:quantum_list/src/widgets/quantum_choreography.dart';
 import 'package:quantum_list/src/widgets/quantum_position_tracker.dart';
 import 'package:quantum_list/src/widgets/scroll_transformation.dart';
 
-// **[CRITICAL FIX]** Added TimeTravelQuantumWidgetController to the exports.
-// The example app can now see and use the new controller.
-// **[اصلاح حیاتی]** کنترلر سفر در زمان به لیست صادرات اضافه شد.
-// اپلیکیشن نمونه اکنون می‌تواند کنترلر جدید را ببیند و استفاده کند.
 export 'src/controllers/controllers.dart'
     show
         QuantumListController,
@@ -21,7 +16,7 @@ export 'src/controllers/controllers.dart'
         QuantumWidgetController,
         ScrollableQuantumListController,
         NotifyingQuantumListController,
-        TimeTravelQuantumWidgetController; // <-- THE FIX IS HERE
+        TimeTravelQuantumWidgetController;
 
 export 'src/enums.dart';
 export 'src/models.dart';
@@ -34,7 +29,7 @@ export 'src/widgets/scroll_transformation.dart';
 export 'src/border/quantum_border.dart';
 export 'src/border/quantum_border_controller.dart';
 
-/// The powerful QuantumList widget - Version 20.1 with all compilation errors fixed.
+/// The powerful QuantumList widget.
 class QuantumList<T> extends StatefulWidget {
   final QuantumListController<T> controller;
   final Widget Function(
@@ -53,6 +48,10 @@ class QuantumList<T> extends StatefulWidget {
   final bool reverse;
   final EdgeInsetsGeometry? padding;
 
+  /// **[NEW]** An optional external scroll controller for advanced use cases like sticky headers.
+  /// **[جدید]** یک کنترلر اسکرول خارجی اختیاری برای موارد استفاده پیشرفته مانند هدرهای چسبان.
+  final ScrollController? scrollController;
+
   const QuantumList({
     Key? key,
     required this.controller,
@@ -60,6 +59,7 @@ class QuantumList<T> extends StatefulWidget {
     this.borderController,
     this.choreography,
     this.scrollTransformation,
+    this.scrollController,
     this.type = QuantumListType.list,
     this.isSliver = false,
     this.gridDelegate,
@@ -77,6 +77,8 @@ class QuantumList<T> extends StatefulWidget {
 class _QuantumListState<T> extends State<QuantumList<T>> {
   late final GlobalKey _listKey;
   late final ScrollController _scrollController;
+  bool _isInternalScrollController = false;
+
   StreamSubscription? _addSubscription;
   StreamSubscription? _insertSubscription;
   StreamSubscription? _removeSubscription;
@@ -101,7 +103,14 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+
+    // Use external controller if provided, otherwise create an internal one.
+    if (widget.scrollController == null) {
+      _scrollController = ScrollController();
+      _isInternalScrollController = true;
+    } else {
+      _scrollController = widget.scrollController!;
+    }
 
     if (widget.type == QuantumListType.list) {
       _listKey = GlobalKey<AnimatedListState>();
@@ -157,7 +166,10 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    // Only dispose the controller if it was created internally.
+    if (_isInternalScrollController) {
+      _scrollController.dispose();
+    }
     _addSubscription?.cancel();
     _insertSubscription?.cancel();
     _removeSubscription?.cancel();

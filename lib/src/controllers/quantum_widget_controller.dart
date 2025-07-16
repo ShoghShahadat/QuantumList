@@ -3,9 +3,8 @@ import '../enums.dart';
 import '../models.dart';
 import 'scrollable_quantum_list_controller.dart';
 
-/// The Revolutionary Quantum Widget Controller - v2.1.0
+/// The Revolutionary Quantum Widget Controller - v2.2.0
 /// This controller allows you to manage your list directly with widgets and their IDs.
-/// No more need for complex data models. Just the widget and its ID!
 class QuantumWidgetController
     extends ScrollableQuantumListController<QuantumEntity> {
   /// Initializes the controller with an optional list of initial quantum entities.
@@ -73,14 +72,22 @@ class QuantumWidgetController
     );
   }
 
-  /// Overriding `insert` to prevent misuse.
-  /// In this architecture, adding items is meant to be done via the `add` method.
+  /// **[CRITICAL FIX]**
+  /// The insert method now performs a real insert instead of redirecting to `add`.
+  /// This was the root cause of the RangeError during undo operations.
+  /// **[اصلاح حیاتی]**
+  /// متد insert اکنون یک درج واقعی انجام می‌دهد و دیگر به add تغییر مسیر نمی‌دهد.
+  /// این مشکل، ریشه اصلی خطای RangeError در حین عملیات undo بود.
   @override
   void insert(int index, QuantumEntity item) {
     debugPrint(
-        "QuantumWidgetController: The insert() method is not recommended for this controller. Use add(entity) instead.");
-    // To prevent potential errors, we redirect it to the add method.
-    add(item);
+        "QuantumWidgetController: The insert() method is not recommended for this controller. Use add(entity) for better ID management.");
+    if (_findIndexById(item.id) != -1) {
+      debugPrint(
+          "QuantumWidgetController: An entity with ID '${item.id}' already exists. Insert is aborted to prevent duplicate IDs.");
+      return;
+    }
+    super.insert(index, item);
   }
 
   /// An internal method to find the index of an entity by its ID.

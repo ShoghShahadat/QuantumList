@@ -1,7 +1,5 @@
 import 'dart:math';
 import 'package:example/widgets/sample_widget.dart';
-// **[NEW]** Importing the new debugger widget.
-// ایمپورت کردن ویجت جدید دیباگر.
 import 'package:example/widgets/time_travel_debugger.dart';
 import 'package:flutter/material.dart';
 import 'package:quantum_list/quantum_list.dart';
@@ -66,8 +64,6 @@ class _TimeTravelShowcasePageState extends State<TimeTravelShowcasePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // **[MODIFIED]** Using a Stack to overlay the debugger on top of the list.
-      // **[اصلاح شد]** استفاده از Stack برای قرار دادن دیباگر روی لیست.
       body: Stack(
         children: [
           QuantumList<QuantumEntity>(
@@ -78,12 +74,11 @@ class _TimeTravelShowcasePageState extends State<TimeTravelShowcasePage> {
                 QuantumAnimations.scaleIn(context, entity.widget, animation),
           ),
           // The magical debugger widget!
-          // ویجت جادویی دیباگر در اینجا به صفحه اضافه شده است
           TimeTravelDebugger(controller: _controller),
         ],
       ),
-      // **[MODIFIED]** Buttons are now part of the debugger panel.
-      // **[اصلاح شد]** دکمه‌ها اکنون بخشی از پنل دیباگر هستند.
+      // **[FIXED]** The main control panel now includes Undo/Redo buttons again.
+      // **[اصلاح شد]** پنل کنترل اصلی اکنون دوباره شامل دکمه‌های Undo/Redo است.
       bottomNavigationBar: _buildControlPanel(),
     );
   }
@@ -100,6 +95,7 @@ class _TimeTravelShowcasePageState extends State<TimeTravelShowcasePage> {
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children: [
+                // --- دکمه‌های اصلی ---
                 ElevatedButton.icon(
                     onPressed: _addWidget,
                     icon: const Icon(Icons.add),
@@ -112,6 +108,23 @@ class _TimeTravelShowcasePageState extends State<TimeTravelShowcasePage> {
                     onPressed: _updateWidget,
                     icon: const Icon(Icons.update),
                     label: const Text('Update Last')),
+                const VerticalDivider(width: 20, thickness: 1),
+
+                // --- دکمه‌های سفر در زمان (بازگشته به جایگاه اصلی) ---
+                ElevatedButton.icon(
+                  onPressed: _controller.canUndo ? _controller.undo : null,
+                  icon: const Icon(Icons.undo),
+                  label: const Text('Undo'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _controller.canRedo ? _controller.redo : null,
+                  icon: const Icon(Icons.redo),
+                  label: const Text('Redo'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600),
+                ),
               ],
             ),
           );
