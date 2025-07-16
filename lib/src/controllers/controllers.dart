@@ -6,6 +6,7 @@ export 'notifying_quantum_list_controller.dart';
 export 'scrollable_quantum_list_controller.dart';
 export 'filterable_quantum_list_controller.dart';
 export 'quantum_widget_controller.dart';
+export 'paginated_quantum_list_controller.dart';
 // **[NEW]** Exporting the new Time-Travel controller.
 // صدور کنترلر جدید سفر در زمان.
 export 'time_travel_quantum_list_controller.dart';

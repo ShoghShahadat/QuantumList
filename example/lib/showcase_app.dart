@@ -4,6 +4,7 @@ import 'package:example/pages/controller_showcase_page.dart';
 import 'package:example/pages/drag_and_drop_showcase_page.dart';
 import 'package:example/pages/layout_morph_showcase_page.dart';
 import 'package:example/pages/magnetic_showcase_page.dart';
+import 'package:example/pages/pagination_showcase_page.dart';
 import 'package:example/pages/performance_showcase_page.dart';
 import 'package:example/pages/swipe_actions_showcase_page.dart';
 import 'package:example/pages/time_travel_showcase_page.dart';
@@ -16,17 +17,18 @@ class ShowcaseApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      // **[MODIFIED]** Increased tab count to 9.
-      // تعداد تب‌ها به ۹ افزایش یافت.
-      length: 9,
+      // **[MODIFIED]** Increased tab count to 10.
+      // تعداد تب‌ها به ۱۰ افزایش یافت.
+      length: 10,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('QuantumList Showcase'),
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
-              // **[NEW]** The new tab for the Swipe Actions showcase.
-              // تب جدید برای نمایش کنش‌های سوایپ.
+              // **[NEW]** The new tab for the Smart Pagination showcase.
+              // تب جدید برای نمایش صفحه‌بندی هوشمند.
+              Tab(text: 'Pagination', icon: Icon(Icons.pages_outlined)),
               Tab(text: 'Swipe Actions', icon: Icon(Icons.swipe)),
               Tab(text: 'Drag & Drop', icon: Icon(Icons.reorder)),
               Tab(
@@ -46,8 +48,9 @@ class ShowcaseApp extends StatelessWidget {
         body: const TabBarView(
           physics: NeverScrollableScrollPhysics(), // To prevent swipe conflicts
           children: [
-            // **[NEW]** The new Swipe Actions showcase page.
-            // صفحه جدید نمایش کنش‌های سوایپ.
+            // **[NEW]** The new Smart Pagination showcase page.
+            // صفحه جدید نمایش صفحه‌بندی هوشمند.
+            PaginationShowcasePage(),
             SwipeActionsShowcasePage(),
             DragAndDropShowcasePage(),
             LayoutMorphShowcasePage(),

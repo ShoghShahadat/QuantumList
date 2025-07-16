@@ -16,7 +16,8 @@ export 'src/controllers/controllers.dart'
         QuantumWidgetController,
         ScrollableQuantumListController,
         NotifyingQuantumListController,
-        TimeTravelQuantumWidgetController;
+        TimeTravelQuantumWidgetController,
+        PaginatedQuantumListController;
 
 export 'src/enums.dart';
 export 'src/models.dart';
@@ -79,7 +80,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   late final ScrollController _scrollController;
   bool _isInternalScrollController = false;
 
-  // State for drag and drop
   int? _draggingIndex;
   int? _dropTargetIndex;
 
@@ -112,6 +112,11 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
       _isInternalScrollController = true;
     } else {
       _scrollController = widget.scrollController!;
+    }
+
+    if (widget.controller is NotifyingQuantumListController) {
+      (widget.controller as NotifyingQuantumListController)
+          .attachScrollController(_scrollController);
     }
 
     if (widget.type == QuantumListType.list) {
@@ -192,8 +197,6 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
               _itemBuilder(context, index, animation),
         );
       case QuantumListType.grid:
-        // **[FIXED]** The complete grid logic is now restored.
-        // **[اصلاح شد]** منطق کامل گرید اکنون بازگردانده شده است.
         assert(widget.gridDelegate != null,
             'gridDelegate must be provided for QuantumListType.grid');
         return AnimatedGrid(
@@ -269,15 +272,13 @@ class _QuantumListState<T> extends State<QuantumList<T>> {
   }
 
   Widget _buildReorderableItem(BuildContext context, int index, Widget child) {
-    // **[FIXED]** The complete reorderable item logic is now restored.
-    // **[اصلاح شد]** منطق کامل آیتم قابل مرتب‌سازی اکنون بازگردانده شده است.
     return DragTarget<int>(
       builder: (context, candidateData, rejectedData) {
         return LongPressDraggable<int>(
           data: index,
           feedback: Material(
             elevation: 4.0,
-            color: Colors.transparent, // To show the original widget style
+            color: Colors.transparent,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.9),
