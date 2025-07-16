@@ -3,58 +3,62 @@ import '../enums.dart';
 import '../models.dart';
 import 'scrollable_quantum_list_controller.dart';
 
-/// کنترلر انقلابی ویجت کوانتومی - نسخه ۲.۰.۰
-/// این کنترلر به شما اجازه می‌دهد تا لیست خود را مستقیماً با ویجت‌ها و شناسه‌هایشان مدیریت کنید.
-/// دیگر نیازی به مدل‌های داده پیچیده نیست. فقط ویجت و شناسه‌اش!
-///
-/// The Revolutionary Quantum Widget Controller - v2.0.0
+/// The Revolutionary Quantum Widget Controller - v2.1.0
 /// This controller allows you to manage your list directly with widgets and their IDs.
 /// No more need for complex data models. Just the widget and its ID!
 class QuantumWidgetController
     extends ScrollableQuantumListController<QuantumEntity> {
-  /// کنترلر را با یک لیست اولیه (اختیاری) از موجودیت‌های کوانتومی مقداردهی می‌کند.
+  /// Initializes the controller with an optional list of initial quantum entities.
   QuantumWidgetController({List<QuantumEntity> initialItems = const []})
       : super(initialItems);
 
-  /// یک ویجت جدید را با شناسه مشخص به انتهای لیست اضافه می‌کند.
-  /// اگر شناسه‌ای از قبل وجود داشته باشد، هشداری نمایش داده شده و عملیات متوقف می‌شود.
+  /// Adds a new widget with its specific ID to the end of the list.
+  /// If an ID already exists, a warning is printed and the operation is aborted.
+  @override
   void add(QuantumEntity entity) {
     if (_findIndexById(entity.id) != -1) {
       debugPrint(
-          "QuantumWidgetController: موجودیتی با شناسه '${entity.id}' از قبل وجود دارد. برای تغییر آن از متد update() استفاده کنید.");
+          "QuantumWidgetController: An entity with ID '${entity.id}' already exists. Use update() to modify it.");
       return;
     }
     super.add(entity);
   }
 
-  /// یک ویجت را بر اساس شناسه‌اش از لیست حذف می‌کند.
+  /// Removes a widget from the list based on its ID.
   void remove(String id) {
     final index = _findIndexById(id);
     if (index != -1) {
       super.removeAt(index);
     } else {
       debugPrint(
-          "QuantumWidgetController: موجودیتی با شناسه '$id' برای حذف یافت نشد.");
+          "QuantumWidgetController: Entity with ID '$id' not found for removal.");
     }
   }
 
-  /// ویجت یک موجودیت موجود را بر اساس شناسه‌اش به‌روزرسانی می‌کند.
-  /// این متد باعث بازسازی (rebuild) بهینه همان ویجت در لیست می‌شود.
+  /// Updates the widget of an existing entity based on its ID.
+  /// This performs an efficient rebuild of only that specific widget in the list.
   void update(String id, Widget newWidget) {
     final index = _findIndexById(id);
     if (index != -1) {
-      // یک موجودیت جدید با ویجت جدید می‌سازیم و جایگزین قبلی می‌کنیم.
+      // Create a new entity with the new widget and replace the old one.
       final newEntity = QuantumEntity(id: id, widget: newWidget);
       items[index] = newEntity;
-      // با استفاده از استریم آپدیت، فقط همان یک آیتم را بازسازی می‌کنیم.
+      // Use the update stream to rebuild only that one item.
       updateNotifier.add(index);
     } else {
       debugPrint(
-          "QuantumWidgetController: موجودیتی با شناسه '$id' برای به‌روزرسانی یافت نشد.");
+          "QuantumWidgetController: Entity with ID '$id' not found for update.");
     }
   }
 
-  /// به سمت یک ویجت خاص بر اساس شناسه‌اش اسکرول می‌کند.
+  /// [NEW] Retrieves a QuantumEntity from the list by its unique ID.
+  /// Returns null if no entity with the given ID is found.
+  QuantumEntity? getById(String id) {
+    final index = _findIndexById(id);
+    return (index != -1) ? items[index] : null;
+  }
+
+  /// Scrolls to a specific widget in the list based on its ID.
   Future<void> scrollTo(
     String id, {
     Duration duration = const Duration(milliseconds: 800),
@@ -69,17 +73,17 @@ class QuantumWidgetController
     );
   }
 
-  /// متد `insert` را بازنویسی می‌کنیم تا از استفاده اشتباه آن جلوگیری شود.
-  /// در این معماری، افزودن فقط از طریق متد `add` معنی‌دار است.
+  /// Overriding `insert` to prevent misuse.
+  /// In this architecture, adding items is meant to be done via the `add` method.
   @override
   void insert(int index, QuantumEntity item) {
     debugPrint(
-        "QuantumWidgetController: متد insert() در این کنترلر پشتیبانی نمی‌شود. لطفاً از add(entity) استفاده کنید.");
-    // برای جلوگیری از خطاهای احتمالی، آن را به سمت متد add هدایت می‌کنیم.
+        "QuantumWidgetController: The insert() method is not recommended for this controller. Use add(entity) instead.");
+    // To prevent potential errors, we redirect it to the add method.
     add(item);
   }
 
-  /// یک متد داخلی برای پیدا کردن ایندکس یک موجودیت بر اساس شناسه‌اش.
+  /// An internal method to find the index of an entity by its ID.
   int _findIndexById(String id) {
     return items.indexWhere((entity) => entity.id == id);
   }

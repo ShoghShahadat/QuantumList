@@ -1,18 +1,16 @@
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'notifying_quantum_list_controller.dart';
 
-/// یک کنترلر تخصصی که اکنون از تمام کنترلرهای دیگر ارث‌بری کرده
-/// و قابلیت‌های فیلترینگ، مرتب‌سازی، اسکرول و اطلاع‌رسانی را به صورت یکجا دارد.
-///
 /// A specialized controller that now inherits from all other controllers,
 /// providing filtering, sorting, scrolling, and notification capabilities all in one.
 class FilterableQuantumListController<T>
     extends NotifyingQuantumListController<T> {
-  /// لیست کامل و اصلی که هرگز تغییر نمی‌کند.
+  /// The complete, original list that is manipulated by sort/filter operations.
   final List<T> masterList;
   bool _isModifying = false;
 
-  /// **[جدید]** تابع فیلتر فعلی را نگه می‌دارد.
+  /// Holds the current filter function.
   bool Function(T item)? _currentFilter;
 
   FilterableQuantumListController(
@@ -23,66 +21,66 @@ class FilterableQuantumListController<T>
   })  : masterList = List.from(initialItems),
         super(initialItems);
 
-  /// فیلتر را بر روی لیست اعمال یا حذف می‌کند.
+  /// Applies or removes a filter on the list.
   void filter(bool Function(T item)? test) {
     if (_isModifying) return;
     _isModifying = true;
-    _currentFilter = test; // ذخیره فیلتر فعلی
+    _currentFilter = test; // Store the current filter
 
     try {
       final List<T> targetList =
           test == null ? masterList : masterList.where(test).toList();
       _diffAndUpdate(targetList);
     } finally {
-      // **[FIXED]** تضمین می‌کند که پرچم همیشه آزاد می‌شود.
       _isModifying = false;
     }
   }
 
-  /// لیست را بر اساس یک تابع مقایسه‌ای مرتب می‌کند.
+  /// Sorts the master list and then reapplies the current filter.
   void sort(int Function(T a, T b) compare) {
     if (_isModifying) return;
     _isModifying = true;
 
     try {
       masterList.sort(compare);
-      // پس از مرتب‌سازی، فیلتر فعلی را دوباره اعمال می‌کنیم.
+      // After sorting, re-apply the current filter to the sorted master list.
       final List<T> targetList = _currentFilter == null
           ? masterList
           : masterList.where(_currentFilter!).toList();
       _diffAndUpdate(targetList);
     } finally {
-      // **[FIXED]** تضمین می‌کند که پرچم همیشه آزاد می‌شود.
       _isModifying = false;
     }
   }
 
-  /// تفاوت بین لیست فعلی و لیست هدف را پیدا کرده و آیتم‌ها را با انیمیشن مدیریت می‌کند.
+  /// Finds the difference between the current list and a target list and manages items with animation.
   void _diffAndUpdate(List<T> targetList) {
+    // A more robust diffing algorithm for smoother animations.
     final currentItems = List<T>.from(items);
-    final currentSet = Set<T>.from(currentItems);
-    final targetSet = Set<T>.from(targetList);
+    final currentSet = HashSet<T>.from(currentItems);
+    final targetSet = HashSet<T>.from(targetList);
 
-    // حذف آیتم‌هایی که دیگر در لیست هدف نیستند
+    // Remove items that are no longer in the target list
     for (int i = currentItems.length - 1; i >= 0; i--) {
       if (!targetSet.contains(currentItems[i])) {
         super.removeAt(i);
       }
     }
 
-    // افزودن و جابجایی آیتم‌ها
+    // Add and move items to match the target list order
     for (int i = 0; i < targetList.length; i++) {
       final targetItem = targetList[i];
       if (i >= items.length) {
-        // اگر به انتهای لیست رسیدیم، فقط اضافه کن
+        // If we are past the end of the current list, just insert
         super.insert(i, targetItem);
       } else if (items[i] != targetItem) {
+        // The item at this position is incorrect.
         final oldIndex = items.indexOf(targetItem);
         if (oldIndex != -1) {
-          // آیتم در لیست وجود دارد، پس آن را جابجا کن
+          // The item exists elsewhere in the list, so move it to the correct spot.
           super.move(oldIndex, i);
         } else {
-          // آیتم جدید است، آن را درج کن
+          // The item is new to the list, so insert it here.
           super.insert(i, targetItem);
         }
       }
@@ -92,7 +90,7 @@ class FilterableQuantumListController<T>
   @override
   void add(T item) {
     masterList.add(item);
-    // **[FIXED]** اگر فیلتری فعال است، آیتم جدید تنها در صورتی اضافه می‌شود که با فیلتر مطابقت داشته باشد.
+    // If a filter is active, the new item is only added to the visible list if it passes the filter.
     if (_currentFilter == null || _currentFilter!(item)) {
       super.add(item);
     }
@@ -100,13 +98,13 @@ class FilterableQuantumListController<T>
 
   @override
   void insert(int index, T item) {
-    // پیدا کردن آیتم مرجع در لیست اصلی برای درج در مکان صحیح
+    // Find the reference item in the master list to insert at the correct position
     T? anchorItem = (index < items.length) ? items[index] : null;
     int masterIndex =
         anchorItem != null ? masterList.indexOf(anchorItem) : masterList.length;
     masterList.insert(masterIndex, item);
 
-    // **[FIXED]** بررسی فیلتر قبل از درج در لیست قابل مشاهده
+    // Check the filter before inserting into the visible list
     if (_currentFilter == null || _currentFilter!(item)) {
       super.insert(index, item);
     }
@@ -119,5 +117,12 @@ class FilterableQuantumListController<T>
       masterList.remove(itemToRemove);
       super.removeAt(index);
     }
+  }
+
+  /// [NEW] Clears both the visible list and the master list.
+  @override
+  void clear() {
+    masterList.clear();
+    super.clear();
   }
 }

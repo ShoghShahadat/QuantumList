@@ -1,5 +1,6 @@
 import 'package:example/pages/animation_showcase_page.dart';
 import 'package:example/pages/border_showcase_page.dart';
+import 'package:example/pages/controller_showcase_page.dart';
 import 'package:flutter/material.dart';
 
 /// The main application widget that holds the tabbed navigation.
@@ -30,11 +31,13 @@ class ShowcaseApp extends StatelessWidget {
             // Tab 1: The fully functional Border Showcase
             BorderShowcasePage(),
 
-            // Tab 2: The new, interactive Animation Showcase
+            // Tab 2: The interactive Animation Showcase
             AnimationShowcasePage(),
 
-            // Placeholder for other showcases
-            Center(child: Text('Controller Showcase Coming Soon!')),
+            // Tab 3: The new Controller Showcase
+            ControllerShowcasePage(),
+
+            // Placeholder for the last tab
             Center(child: Text('Performance Test Coming Soon!')),
           ],
         ),
